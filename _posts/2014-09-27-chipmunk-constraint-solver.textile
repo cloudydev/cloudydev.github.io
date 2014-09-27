@@ -1,0 +1,191 @@
+---
+layout: post
+title: chipmunk-约束求解
+---
+
+h1. TODO
+
+# 迭代？
+# cache impulse?
+# 理解其他约束的数学表达
+# 摩擦力?
+
+p.  
+
+h1. 约束方程
+
+p.  
+
+我们先定义一个以时间t，物体状态量作为变量的函数，称之为约束函数:
+$$
+\begin{align*}
+C_k = C_k(t, \vec{s(t)}, \vec{u(t)});\\
+\end{align*}
+$$
+一个约束关系 k 可以用上面函数的方程来定义：\( C_k = 0 \), 如果在时刻 t,物体位置\(\vec{s(t)}\), 速度\(\vec{u(t)} \)满足上述的方程，那么这个物体在 t 时刻就满足约束关系k;
+
+h1. 接触约束
+
+p.  
+
+对于发生接触的两个物体，我们给出的约束关系时这两个物体不能相互刺穿（对于2D的情况就是不能相交），我们在碰撞检测阶段会计算出两个物体 \(Body_1\) 和 \(Body_2\) 的
+* 碰撞方向 \(\vec{n}\) (我们规定这个方向时从 \(Body_1\) 指向 \(Body_2\) 的)
+* 接触点 \(P_1\)和 \(P_2\) (当然，在碰撞时\( P_1 = P_2\) )
+
+我们可以根据两个触点位置的相对位移来写出碰撞的约束方程:
+$$ C_k = (\vec{x_{P2}} - \vec{x_{P1}}) \cdot \vec{n} \geq 0 $$
+
+\(C_k\)的物理意义描述了两个物体在碰撞方向 \(\vec{n}\) 上的相对位移,同样 \(C_k\)对于时间 t 的导数描述了物体在碰撞方向 \(\vec{n}\)的相对速度 (刚体质点的速度是平移速度和线速度的叠加，\( \vec{v_{Pi}} = \vec{v_i} + \vec{\omega_i} \times \vec{r_i}\) 这里就不对下面的公式进行展开了)：
+$$ 
+C_k' = (\vec{v_{P2}} - \vec{v_{P1}}) \cdot \vec{n} 
+$$ 
+
+\(C_k\) 可以用来判定物体的接触状态：
+* \( C_k < 0\) : 两个物体接触，并且相交（\( P_1 \neq P_2\) ）
+* \( C_k = 0\) : 两个物体接触（\( P_1 = P_2\) ）
+* \( C_k < 0\) : 两个物体分离，没有接触，这种情况在碰撞检测阶段被排除
+
+当\( C_k = 0\) 时，\(C_k'\) 的值可以用来分析这两个物体的碰撞状态:
+* \( C_k' < 0\) : 两个物体接触，在向彼此靠近，是一次碰撞
+* \( C_k’ = 0\) : 两个物体接触但是没有相对运动，说明这两个物体处于平衡状态
+8 \( C_k' > 0\) : 两个物体接触，正在彼此分离
+
+**碰撞约束**
+两个物体的碰撞发生很小的时间段\( \Delta{t}\) 內，碰撞之后两个物体的速度发生了改变。
+$$
+\tag{1_1}
+\vec{v}(t + \Delta{t}) = \vec{v}(t) + \vec{J} \cdot M^{-1} \\
+\vec{\omega}(t + \Delta{t}) = \vec{\omega}(t) + \Delta{L} \cdot I^{-1} 
+= \vec{\omega}(t) + (\vec{r} \times \vec{J} ) \cdot I^{-1} \\
+\vec{u}(t) = \vec{v}(t) + \vec{\omega}(t) \times \vec{r}
+$$
+
+
+
+其中 \( \vec{J} \) 是物体在碰撞过程中受到的冲量，物体在 \( \Delta(t) \) 内受到的冲量等于它自身动量的变化，那么根据动量守恒，两个物体 \(Body_1\) 和 \(Body_2\) 在碰撞过程中各自受到的冲量会相互抵消： \( \vec{J}_{body1}  = -\vec{J}_{body2} \) ，我们已知物体在 t 时刻的速度，因此我们只要计算出碰撞过程中产生的 \( \vec{J} \) 就可以算出在 \(t + \Delta{t}\)时刻（碰撞之后）物体的速度了。
+
+为了算出 \( \vec{J} \) 的大小，这里就要提到恢复系数 e 的概念，恢复系数被定义为两个物体碰撞之后的沿着碰撞方向的相对速度与碰撞之前的比:
+$$
+\tag{1_2}
+\Delta \vec{u}_{(t, \vec{n})} = (\vec{u}_{Body_2}(t) - \vec{u}_{Body_1}(t)) \cdot \vec{n}\\
+e = -\frac{\Delta \vec{u}_{(t + \Delta{t},\hspace{2pt} \vec{n})}}{\Delta \vec{u}_{(t, \hspace{2pt} \vec{n})}}
+$$
+根据上面的等式关系，我们可以写出碰撞时的约束方程:
+$$
+\tag{1_3}
+C_k = \Delta \vec{u}_{(Body_2, \vec{n})} + e \cdot \Delta \vec{u}_{(Body_1, \vec{n})} = 0
+$$
+
+根据1_1, 1_2带入到1_3中，我们可以算出 \( \vec{J}\) (更详细的计算过程可以参考["这里":http://en.wikipedia.org/wiki/Collision_response])
+$$
+\tag{1_4}
+\vec{J} = K^{-1} \cdot (1 + e) \cdot \Delta \vec{u}_{(t, \vec{n})} \\
+K = M_{Body_1}^{-1} + M_{Body_2}^{-1} + 
+[ 
+I_1^{-1} \cdot (\vec{r_1} \times \vec{n}) \times \vec{r_1} +
+I_2^{-1} \cdot (\vec{r_2} \times \vec{n}) \times \vec{r_2}
+] 
+\cdot \vec{n}
+$$
+
+**代码实现**
+约束求解的部分被分成了两个步骤, 常量计算部分和迭代计算部分，两个步骤之间插入了一步速度积分的过程
+
+{% highlight  C %}
+void
+cpSpaceStep(cpSpace *space, cpFloat dt)
+{
+    // 初始化
+    // 位置积分
+    // 碰撞检测
+    // 静止物体检测
+
+    // 约束求解(常量部分)
+        // 过滤无效碰撞体
+        // 求解碰撞方程，常量部分
+        // 求解自定义约束方程，常量部分
+
+    // 速度积分
+    // Apply cached impulses
+
+    // 约束求解(迭代部分)
+        // 求解碰撞方程，迭代部分
+	// 求解自定义约束方程,迭代部分
+}
+{% endhighlight %}
+
+* 过滤无效碰撞体
+一个碰撞体，只要满足下面的任何一个条件就被定义为无效的碰撞，不需要进行处理
+## 碰撞体包含的两个物体可能发生碰撞
+## 碰撞体的碰撞持续时间超过了预定义的阀值，这个碰撞就被定义为失效
+
+{% highlight  C %}
+cpBool
+cpSpaceArbiterSetFilter(cpArbiter *arb, cpSpace *space)
+{       
+    // 计算统计碰撞体发生碰撞的持续时间
+    cpTimestamp ticks = space->stamp - arb->stamp;
+    cpBody *a = arb->body_a, *b = arb->body_b;
+
+    // 条件1：静态物体，睡眠的物体之间不应该发生碰撞
+    if(
+      	(cpBodyGetType(a) == CP_BODY_TYPE_STATIC || cpBodyIsSleeping(a)) &&
+	(cpBodyGetType(b) == CP_BODY_TYPE_STATIC || cpBodyIsSleeping(b))
+    ){
+	return cpTrue;
+    }
+
+    // Arbiter was used last frame, but not this one
+    if(ticks >= 1 && arb->state != CP_ARBITER_STATE_CACHED){
+	arb->state = CP_ARBITER_STATE_CACHED;
+	cpCollisionHandler *handler = arb->handler;
+	handler->separateFunc(arb, space, handler->userData);
+    }
+
+    // 条件2：碰撞已经失效
+    if(ticks >= space->collisionPersistence){
+        // 回收arb内存，放到内存池里
+	return cpFalse;
+    }
+    return cpTrue;
+}
+{% endhighlight %}
+
+* 约束求解，常量部分（碰撞部分）
+## con->nMass代表1_4中的分母部分，对于迭代求解的算法中，这部分是常量，因此单独把这一部分的计算放到了前面
+## con->bounce是公式1_4中的 \( e \cdot \Delta \vec{u}_{(t, \vec{n})} \)
+
+{% highlight  C %}
+void
+cpArbiterPreStep(cpArbiter *arb, cpFloat dt, cpFloat slop, cpFloat bias)
+{
+    cpBody *a = arb->body_a;
+    cpBody *b = arb->body_b;
+    cpVect n = arb->n;
+    cpVect body_delta = cpvsub(b->p, a->p);
+	
+    for(int i=0; i<arb->count; i++){
+	struct cpContact *con = &arb->contacts[i];
+	// Calculate the mass normal and mass tangent.
+        // 计算mMass, tMass, bias, jBias, bounce
+    }
+}
+{% endhighlight %}
+* 约束求解，迭代部分 (碰撞部分)
+## 作者把碰撞和自定义约束的求解放到了一个循环体內
+## 函数 **cpArbiterApplyImpulse** 中计算公式 **1_4** 中的冲量 \(\vec{J}\),并施加到对应物体上,立即改变对应物体的速度状态
+
+{% highlight  C %}
+// Run the impulse solver.
+for(int i=0; i<space->iterations; i++){
+    // 碰撞约束
+    for(int j=0; j<arbiters->num; j++){
+	cpArbiterApplyImpulse((cpArbiter *)arbiters->arr[j]);
+    }
+
+    // 自定义约束
+    for(int j=0; j<constraints->num; j++){
+        //...
+    }
+}
+{% endhighlight %}

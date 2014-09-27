@@ -17,7 +17,7 @@ html, body {
 
 body {
   background-color: white;
-  font: 13.34px helvetica, arial, clean, sans-serif;
+  font: 13.34px lucida-console, helvetica, arial, clean, sans-serif;
   *font-size: small;
   text-align: center;
 }
@@ -44,6 +44,12 @@ a:hover {
 
 a:visited {
   color: #a0a;
+}
+
+blockquote {
+  margin: 1.5em;
+  color: #666;
+  font-style: italic;
 }
 
 table {
@@ -81,7 +87,7 @@ ul.posts {
 .site {
   font-size: 110%;
   text-align: justify;
-  width: 42em;
+  width: 48em;
   margin: 3em auto 2em auto;
   line-height: 1.5em;
 }
@@ -155,20 +161,30 @@ ul.posts {
   /* standard */
 
   #post pre {
-    border: 1px solid #ddd;
-    background-color: #eef;
-    padding: 0 .4em;
+    color: 000;
+    background-color: white;
+    box-shadow: rgb(119, 119, 119) 1px 1px 1px 1px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #aaaaaa;
+    font-size: 15px;
+    font-family: 'Courier New','Lucida Console', 'helvetica', 'arial', 'clean', 'sans-serif';
+    line-height: normal;
+    margin: 0 0 15px 0;
   }
 
   #post ul,
   #post ol {
-    margin-left: 1.35em;
+    margin-left: 1.15em;
   }
 
   #post code {
     border: 1px solid #ddd;
-    background-color: #eef;
-    font-size: 85%;
+    /*background-color: #eef;*/
+    /*font-size: 85%;*/
+    font-size: 15px;
+    font-family: 'Courier New','Lucida Console', 'helvetica', 'arial', 'clean', 'sans-serif';
+    line-height: normal;
     padding: 0 .2em;
   }
 
@@ -180,7 +196,7 @@ ul.posts {
 
   #post pre.terminal {
     border: 1px solid black;
-    background-color: #333;
+    /*background-color: #333;*/
     color: white;
   }
 

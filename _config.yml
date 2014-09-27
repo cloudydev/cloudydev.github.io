@@ -1,2 +1,6 @@
-markdown: rdiscount
-pygments: true
+# Build settings
+markdown: kramdown
+highlighter: pygments
+timezone: Asia/Chongqing
+
+
