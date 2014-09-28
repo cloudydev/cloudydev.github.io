@@ -3,11 +3,10 @@ layout: post
 title: chipmunk-约束求解
 ---
 
-h1. TODO
+h1. 没有弄懂的部分
 
-# 迭代？
+# 迭代算法
 # cache impulse?
-# 理解其他约束的数学表达
 # 摩擦力?
 
 p.  
