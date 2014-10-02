@@ -1,6 +1,6 @@
 ---
 layout: post
-title: chipmunk-约束求解
+title: 约束求解
 ---
 
 h1. 没有弄懂的部分
@@ -47,7 +47,7 @@ $$
 当\( C_k = 0\) 时，\(C_k'\) 的值可以用来分析这两个物体的碰撞状态:
 * \( C_k' < 0\) : 两个物体接触，在向彼此靠近，是一次碰撞
 * \( C_k’ = 0\) : 两个物体接触但是没有相对运动，说明这两个物体处于平衡状态
-8 \( C_k' > 0\) : 两个物体接触，正在彼此分离
+* \( C_k' > 0\) : 两个物体接触，正在彼此分离
 
 **碰撞约束**
 两个物体的碰撞发生很小的时间段\( \Delta{t}\) 內，碰撞之后两个物体的速度发生了改变。
@@ -87,104 +87,3 @@ I_2^{-1} \cdot (\vec{r_2} \times \vec{n}) \times \vec{r_2}
 \cdot \vec{n}
 $$
 
-**代码实现**
-约束求解的部分被分成了两个步骤, 常量计算部分和迭代计算部分，两个步骤之间插入了一步速度积分的过程
-
-{% highlight  C %}
-void
-cpSpaceStep(cpSpace *space, cpFloat dt)
-{
-    // 初始化
-    // 位置积分
-    // 碰撞检测
-    // 静止物体检测
-
-    // 约束求解(常量部分)
-        // 过滤无效碰撞体
-        // 求解碰撞方程，常量部分
-        // 求解自定义约束方程，常量部分
-
-    // 速度积分
-    // Apply cached impulses
-
-    // 约束求解(迭代部分)
-        // 求解碰撞方程，迭代部分
-	// 求解自定义约束方程,迭代部分
-}
-{% endhighlight %}
-
-* 过滤无效碰撞体
-一个碰撞体，只要满足下面的任何一个条件就被定义为无效的碰撞，不需要进行处理
-## 碰撞体包含的两个物体可能发生碰撞
-## 碰撞体的碰撞持续时间超过了预定义的阀值，这个碰撞就被定义为失效
-
-{% highlight  C %}
-cpBool
-cpSpaceArbiterSetFilter(cpArbiter *arb, cpSpace *space)
-{       
-    // 计算统计碰撞体发生碰撞的持续时间
-    cpTimestamp ticks = space->stamp - arb->stamp;
-    cpBody *a = arb->body_a, *b = arb->body_b;
-
-    // 条件1：静态物体，睡眠的物体之间不应该发生碰撞
-    if(
-      	(cpBodyGetType(a) == CP_BODY_TYPE_STATIC || cpBodyIsSleeping(a)) &&
-	(cpBodyGetType(b) == CP_BODY_TYPE_STATIC || cpBodyIsSleeping(b))
-    ){
-	return cpTrue;
-    }
-
-    // Arbiter was used last frame, but not this one
-    if(ticks >= 1 && arb->state != CP_ARBITER_STATE_CACHED){
-	arb->state = CP_ARBITER_STATE_CACHED;
-	cpCollisionHandler *handler = arb->handler;
-	handler->separateFunc(arb, space, handler->userData);
-    }
-
-    // 条件2：碰撞已经失效
-    if(ticks >= space->collisionPersistence){
-        // 回收arb内存，放到内存池里
-	return cpFalse;
-    }
-    return cpTrue;
-}
-{% endhighlight %}
-
-* 约束求解，常量部分（碰撞部分）
-## con->nMass代表1_4中的分母部分，对于迭代求解的算法中，这部分是常量，因此单独把这一部分的计算放到了前面
-## con->bounce是公式1_4中的 \( e \cdot \Delta \vec{u}_{(t, \vec{n})} \)
-
-{% highlight  C %}
-void
-cpArbiterPreStep(cpArbiter *arb, cpFloat dt, cpFloat slop, cpFloat bias)
-{
-    cpBody *a = arb->body_a;
-    cpBody *b = arb->body_b;
-    cpVect n = arb->n;
-    cpVect body_delta = cpvsub(b->p, a->p);
-	
-    for(int i=0; i<arb->count; i++){
-	struct cpContact *con = &arb->contacts[i];
-	// Calculate the mass normal and mass tangent.
-        // 计算mMass, tMass, bias, jBias, bounce
-    }
-}
-{% endhighlight %}
-* 约束求解，迭代部分 (碰撞部分)
-## 作者把碰撞和自定义约束的求解放到了一个循环体內
-## 函数 **cpArbiterApplyImpulse** 中计算公式 **1_4** 中的冲量 \(\vec{J}\),并施加到对应物体上,立即改变对应物体的速度状态
-
-{% highlight  C %}
-// Run the impulse solver.
-for(int i=0; i<space->iterations; i++){
-    // 碰撞约束
-    for(int j=0; j<arbiters->num; j++){
-	cpArbiterApplyImpulse((cpArbiter *)arbiters->arr[j]);
-    }
-
-    // 自定义约束
-    for(int j=0; j<constraints->num; j++){
-        //...
-    }
-}
-{% endhighlight %}

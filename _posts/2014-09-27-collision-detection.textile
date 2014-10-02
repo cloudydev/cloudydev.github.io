@@ -1,0 +1,44 @@
+---
+layout: post
+title: 碰撞检测
+---
+
+
+h1. 碰撞检测
+
+
+p(. 在一共有 n 个物体的空间里，如果我们用枚举法找出所有发生碰撞的物体对最少需要 \( C_m^2\) 次比较，而两个物体之间的碰撞判断本身是一个比较复杂的操作，这种做法在 n 很大的时候效率就很低了。因此提升效率的关键就是减少物体之间的比较次数。
+
+* 在检测两个物体是否碰撞时，先比较两个物体的包围体（ ["Bouding Volume":http://en.wikipedia.org/wiki/Bounding_volume] )是否碰撞，如果没有就可以跳过后面复杂的碰撞算法环节
+
+
+* 降低检索的范围，在检索与A碰撞的物体时, 只检索在A周围的物体。为了能够快速的定位到A周围的物体，我们需要一种数据结构能够描述场景中物体的分布情况，这种结构称之为加速结构（Acceleration Structures)。通常做法就是进行["空间划分":http://gameprogrammingpatterns.com/spatial-partition.html] ，对空间中的物体按照细分出来的区间进行归类
+
+p(. chipmunk 7 里根据不同的空间划分策略，提供了三种加速结构:
+
+**Sweep and Prune** ( Sort and Sweep )
+
+p(. 如果把一个2D空间里面的AABB向 x 轴和 y 轴进行投影，一个2维的AABB就退化成了2个一维的线段，两个AABB相交问题就可以转化成两个一维空间里的线段相交问题：(参考["SAT":http://www.codezealot.org/archives/55#comments] (Separating Axis Theorem))
+
+p(. 我们把 \(AABB_i\) 在x轴上的投影线段为记为 \( (x_i, x_i') \)
+* 按照线段的左侧端点的位置进行排序。
+* 从左向右依次遍历：
+** 碰到线段的左端点 \(x_i\)，把线段 i 放到集合 A 中，此时 %{color:RED}线段 i 与集合 A 中的其他线段相交% ；
+** 碰到线段的右端点 \(x_i'\)， 把线段 i 从集合 A 中移除。
+
+p. 
+
+<div class="figure">
+<img src="\data\img_sweep_and_prune.jpg">
+</div>
+
+p(. 扫描线算法的主要时间开销在排序的部分，可以使用 \(O(log(n))\) 的快速排序，如果知道空间中物体的位置变化并不剧烈，相邻两帧之间的数组基本有序，这时可以用插入排序，时间效率可以优化到 \(O(n)\)。
+
+
+**Spatial Hashing**
+
+p(. TODO 
+
+**BVH** (["Bounding Volume Hierarchy":http://en.wikipedia.org/wiki/Bounding_volume_hierarchy])
+
+p(. TODO
