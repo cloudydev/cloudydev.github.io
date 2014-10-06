@@ -24,6 +24,7 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-size: 100%;
+  font-family: 'Courier New','Lucida Console', 'helvetica', 'arial', 'clean', 'sans-serif';
 }
 
 h1 {
@@ -129,24 +130,24 @@ ul.posts {
     overflow: hidden;
   }
 
-    .site .footer .contact {
-      float: left;
-      margin-right: 3em;
-    }
+  .site .footer .contact {
+    float: left;
+    margin-right: 3em;
+  }
 
-      .site .footer .contact a {
-        color: #8085C1;
-      }
+  .site .footer .contact a {
+    color: #8085C1;
+  }
 
-    .site .footer .rss {
-      margin-top: 1.1em;
-      margin-right: -.2em;
-      float: right;
-    }
+  .site .footer .rss {
+    margin-top: 1.1em;
+    margin-right: -.2em;
+    float: right;
+  }
 
-      .site .footer .rss img {
-        border: 0;
-      }
+  .site .footer .rss img {
+    border: 0;
+  }
 
 /*****************************************************************************/
 /*
@@ -200,9 +201,9 @@ ul.posts {
     padding: 0 .2em;
   }
 
-    #post pre code {
-      border: none;
-    }
+  #post pre code {
+    border: none;
+  }
 
   /* terminal */
 
@@ -216,9 +217,29 @@ ul.posts {
     background-color: #333;
   }
 
-#related {
-  margin-top: 2em;
-}
+  #post .MathJax {
+    color:#004697;
+  }
+
+  #post h1 {
+    color:black;
+    font-size:150%;
+  }
+
+  #post h2 {
+    color:#b81d18;
+    font-size:130%;
+  }
+
+  #post h3 {
+    color:#004687;
+    font-size:105%;
+    font-style:italic;
+  }
+
+  #related {
+    margin-top: 2em;
+  }
 
   #related h2 {
     margin-bottom: 1em;

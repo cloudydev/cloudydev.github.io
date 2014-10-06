@@ -16,7 +16,7 @@ p(. 在一共有 n 个物体的空间里，如果我们用枚举法找出所有�
 
 p(. chipmunk 7 里根据不同的空间划分策略，提供了三种加速结构:
 
-**Sweep and Prune** ( Sort and Sweep )
+h2. Sweep and Prune ( Sort and Sweep )
 
 p(. 如果把一个2D空间里面的AABB向 x 轴和 y 轴进行投影，一个2维的AABB就退化成了2个一维的线段，两个AABB相交问题就可以转化成两个一维空间里的线段相交问题：(参考["SAT":http://www.codezealot.org/archives/55#comments] (Separating Axis Theorem))
 
@@ -35,10 +35,10 @@ p.
 p(. 扫描线算法的主要时间开销在排序的部分，可以使用 \(O(log(n))\) 的快速排序，如果知道空间中物体的位置变化并不剧烈，相邻两帧之间的数组基本有序，这时可以用插入排序，时间效率可以优化到 \(O(n)\)。
 
 
-**Spatial Hashing**
+h2. Spatial Hashing
 
 p(. TODO 
 
-**BVH** (["Bounding Volume Hierarchy":http://en.wikipedia.org/wiki/Bounding_volume_hierarchy])
+h2. BVH (["Bounding Volume Hierarchy":http://en.wikipedia.org/wiki/Bounding_volume_hierarchy])
 
 p(. TODO

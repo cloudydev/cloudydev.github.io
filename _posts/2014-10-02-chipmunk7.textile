@@ -5,7 +5,7 @@ title: chipmunk 7 代码实现
 
 h1. 工程
 
-真正有用的代码在include和src文件夹下面，代码量不到1w行:
+真正有用的代码在 include 和 src 文件夹下面，代码量不到1w行:
 
 <pre class="table">
 [roc : Chipmunk2D]$: cloc include/ src/
@@ -33,7 +33,7 @@ SUM:                        55           2356           2244           8350
 p.  
 
 
-**Basics**
+h2. Basics
 
 Basics下面是chipmunk里面用到的基本数据结构，包括两种存储容器：数组 (cpArray )和哈希表 (cpHashSet)，向量 (cpVec), AABB包围体 (cpBB), 和变换矩阵(cpTransform)。
 
@@ -50,7 +50,9 @@ Basics下面是chipmunk里面用到的基本数据结构，包括两种存储容
 #endif
 {% endhighlight %}
 
-**Body & Shape**
+p. 
+
+h2. Body & Shape
 
 Body代表一个具体的物体，实现很简单，值得留意的是里面定义的sleeping结构体，用来做物体的睡眠检测
 
@@ -77,7 +79,9 @@ typedef enum cpShapeType{
 } cpShapeType;
 {% endhighlight %}
 
-**Collision**
+p.  
+
+h2. Collision
 
 两个具体形状之间的碰撞检测函数定义成如下形式：
 
@@ -100,8 +104,9 @@ $$ index = type_a + type_b \cdot \text{CP_NUM_SHAPES};$$
   -------------------------------------------------------------------------
 </pre>
 
+// TODO 碰撞算法
 
-**Time step**
+h2. Time step
 
 time step是最重要的部分，实现在Space/cpSpaceStep.c里：
 
@@ -123,7 +128,11 @@ cpSpaceStep(cpSpace *space, cpFloat dt)
 }
 {% endhighlight %}
 
-**初始化**
+p.  
+
+h3. 初始化
+
+p. 
 
 {% highlight  C %}
 void
@@ -160,7 +169,9 @@ cpSpaceStep(cpSpace *space, cpFloat dt)
 
 {% endhighlight %}
 
-**位置 & 速度积分**
+p.  
+
+h3. 位置 & 速度积分
 
 物体的位置和速度的积分逻辑被封装成了对应的函数，作为Body结构的成员之一：
 
@@ -176,13 +187,15 @@ struct cpBody {
 
 chipmunk对这部分的积分用了最简单的["欧拉积分":http://en.wikipedia.org/wiki/Euler_method] ，对位置的积分放到了速度积分的前面(?)。
 
-**碰撞检测**
+h3. 碰撞检测
 
-**睡眠检测**
+TODO
 
+h3. 睡眠检测
 
+TODO
 
-**约束求解**
+h3. 约束求解
 
 约束求解的部分被分成了两个步骤, 常量计算部分和迭代计算部分，两个步骤之间插入了一步速度积分的过程
 
