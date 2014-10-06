@@ -1,0 +1,284 @@
+---
+layout: post
+title: chipmunk 7 代码实现
+---
+
+h1. 工程
+
+真正有用的代码在include和src文件夹下面，代码量不到1w行:
+
+<pre class="table">
+[roc : Chipmunk2D]$: cloc include/ src/
+      55 text files.
+      55 unique files.
+       0 files ignored.
+
+http://cloc.sourceforge.net v 1.60  T=0.37 s (148.6 files/s, 34996.2 lines/s)
+------------------------------------------------------------------------------
+Language                  files          blank        comment           code
+------------------------------------------------------------------------------
+C                           28           1654            991           6469
+C/C++ Header                26            698           1246           1844
+CMake                       1              4              7             37
+------------------------------------------------------------------------------
+SUM:                        55           2356           2244           8350
+------------------------------------------------------------------------------
+</pre>
+
+用Xcode打开，源代码根据用途分成Basics, Collision, Constraints, Space四个模块:
+
+<div class="figure">
+<img src="\data\img_chipmunk_7_xcode.png">
+</div>
+p.  
+
+
+**Basics**
+
+Basics下面是chipmunk里面用到的基本数据结构，包括两种存储容器：数组 (cpArray )和哈希表 (cpHashSet)，向量 (cpVec), AABB包围体 (cpBB), 和变换矩阵(cpTransform)。
+
+其中变换矩阵是由一个旋转缩放矩阵 \( \begin{pmatrix} a & b \\ c & d \end{pmatrix} \) ，另外加上一个位移分量 \( \begin{pmatrix} tx \\ ty \end{pmatrix} \) 
+
+{% highlight  C %}
+#if CP_USE_CGTYPES
+	typedef CGAffineTransform cpTransform;
+#else
+	/// Column major affine transform.
+	typedef struct cpTransform {
+		cpFloat a, b, c, d, tx, ty;
+	} cpTransform;
+#endif
+{% endhighlight %}
+
+**Body & Shape**
+
+Body代表一个具体的物体，实现很简单，值得留意的是里面定义的sleeping结构体，用来做物体的睡眠检测
+
+{% highlight  C %}
+struct cpBody {
+	// members ... 
+
+	struct {
+		cpBody *root;
+		cpBody *next;
+		cpFloat idleTime;
+	} sleeping;
+};
+{% endhighlight %}
+
+Shape用来定义一个物体的具体形状，也是用来做碰撞检测的基本单元，chipmunk只定义了三种形状
+
+{% highlight  C %}
+typedef enum cpShapeType{
+	CP_CIRCLE_SHAPE,
+	CP_SEGMENT_SHAPE,
+	CP_POLY_SHAPE,
+	CP_NUM_SHAPES
+} cpShapeType;
+{% endhighlight %}
+
+**Collision**
+
+两个具体形状之间的碰撞检测函数定义成如下形式：
+
+{% highlight  C %}
+typedef void (*CollisionFunc)(const cpShape *a,
+                              const cpShape *b,
+                              struct cpCollisionInfo *info);
+{% endhighlight %}
+
+不同形状之间的碰撞函数存在一个函数指针数组里面，并按照两个形状的类型枚举值进行寻址 (这里是把枚举小的放到 \(type_a\) ):
+$$ index = type_a + type_b \cdot \text{CP_NUM_SHAPES};$$
+
+<pre class="table">
+  -------------------------------------------------------------------------
+  | type             | CP_CIRCLE_SHAPE | CP_SEGMENT_SHAPE | CP_POLY_SHAPE |
+  -------------------------------------------------------------------------
+  | CP_CIRCLE_SHAPE  | CircleToCircle  | x                | x             |
+  | CP_SEGMENT_SHAPE | CircleToSegment | SegmentToSegment | x             |
+  | CP_POLY_SHAPE    | CircleToPoly    | SegmentToPoly    | PolyToPoly    |
+  -------------------------------------------------------------------------
+</pre>
+
+
+**Time step**
+
+time step是最重要的部分，实现在Space/cpSpaceStep.c里：
+
+{% highlight  C %}
+void
+cpSpaceStep(cpSpace *space, cpFloat dt)
+{
+    // 初始化
+    // 位置积分
+    // 碰撞检测
+    // 睡眠检测
+
+    // 约束求解(常量部分)
+
+    // 速度积分
+    // 叠加缓存的冲量
+
+    // 约束求解(迭代部分)
+}
+{% endhighlight %}
+
+**初始化**
+
+{% highlight  C %}
+void
+cpSpaceStep(cpSpace *space, cpFloat dt)
+{
+        if(dt == 0.0f) return;
+
+    // 初始化相关变量
+        space->stamp++;
+	
+        cpFloat prev_dt = space->curr_dt;
+        space->curr_dt = dt;
+		
+        cpArray *bodies = space->dynamicBodies;
+        cpArray *constraints = space->constraints;
+        cpArray *arbiters = space->arbiters;
+
+    // 更新碰撞对状态
+    	// Reset and empty the arbiter lists.
+	for(int i=0; i<arbiters->num; i++){
+		cpArbiter *arb = (cpArbiter *)arbiters->arr[i];
+		arb->state = CP_ARBITER_STATE_NORMAL;
+		
+    // 唤醒碰撞对涉及的两个物体
+		if(!cpBodyIsSleeping(arb->body_a) &&
+                  !cpBodyIsSleeping(arb->body_b)){
+			cpArbiterUnthread(arb);
+		}
+	}
+	arbiters->num = 0;
+
+    // ...
+}
+
+{% endhighlight %}
+
+**位置 & 速度积分**
+
+物体的位置和速度的积分逻辑被封装成了对应的函数，作为Body结构的成员之一：
+
+{% highlight  C %}
+struct cpBody {
+	// Integration functions
+	cpBodyVelocityFunc velocity_func;
+	cpBodyPositionFunc position_func;
+	
+	// ...
+}
+{% endhighlight %}
+
+chipmunk对这部分的积分用了最简单的["欧拉积分":http://en.wikipedia.org/wiki/Euler_method] ，对位置的积分放到了速度积分的前面(?)。
+
+**碰撞检测**
+
+**睡眠检测**
+
+
+
+**约束求解**
+
+约束求解的部分被分成了两个步骤, 常量计算部分和迭代计算部分，两个步骤之间插入了一步速度积分的过程
+
+{% highlight  C %}
+void
+cpSpaceStep(cpSpace *space, cpFloat dt)
+{
+    // ...
+
+    // 约束求解(常量部分)
+        // 过滤无效碰撞体
+        // 求解碰撞方程，常量部分
+        // 求解自定义约束方程，常量部分
+
+    // 速度积分
+    // 叠加缓存的冲量
+
+    // 约束求解(迭代部分)
+        // 求解碰撞方程，迭代部分
+	// 求解自定义约束方程,迭代部分
+}
+{% endhighlight %}
+
+
+* 过滤无效碰撞体
+一个碰撞体，只要满足下面的任何一个条件就被定义为无效的碰撞，不需要进行处理
+## 碰撞体包含的两个物体可能发生碰撞
+## 碰撞体的碰撞持续时间超过了预定义的阀值，这个碰撞就被定义为失效
+
+{% highlight  C %}
+cpBool
+cpSpaceArbiterSetFilter(cpArbiter *arb, cpSpace *space)
+{       
+    // 计算统计碰撞体发生碰撞的持续时间
+    cpTimestamp ticks = space->stamp - arb->stamp;
+    cpBody *a = arb->body_a, *b = arb->body_b;
+
+    // 条件1：静态物体，睡眠的物体之间不应该发生碰撞
+    if(
+      	(cpBodyGetType(a) == CP_BODY_TYPE_STATIC || cpBodyIsSleeping(a)) &&
+	(cpBodyGetType(b) == CP_BODY_TYPE_STATIC || cpBodyIsSleeping(b))
+    ){
+	return cpTrue;
+    }
+
+    // Arbiter was used last frame, but not this one
+    if(ticks >= 1 && arb->state != CP_ARBITER_STATE_CACHED){
+	arb->state = CP_ARBITER_STATE_CACHED;
+	cpCollisionHandler *handler = arb->handler;
+	handler->separateFunc(arb, space, handler->userData);
+    }
+
+    // 条件2：碰撞已经失效
+    if(ticks >= space->collisionPersistence){
+        // 回收arb内存，放到内存池里
+	return cpFalse;
+    }
+    return cpTrue;
+}
+{% endhighlight %}
+
+* 约束求解，常量部分（碰撞部分）
+## con->nMass代表1_4中的分母部分，对于迭代求解的算法中，这部分是常量，因此单独把这一部分的计算放到了前面
+## con->bounce是公式1_4中的 \( e \cdot \Delta \vec{u}_{(t, \vec{n})} \)
+
+{% highlight  C %}
+void
+cpArbiterPreStep(cpArbiter *arb, cpFloat dt, cpFloat slop, cpFloat bias)
+{
+    cpBody *a = arb->body_a;
+    cpBody *b = arb->body_b;
+    cpVect n = arb->n;
+    cpVect body_delta = cpvsub(b->p, a->p);
+	
+    for(int i=0; i<arb->count; i++){
+	struct cpContact *con = &arb->contacts[i];
+	// Calculate the mass normal and mass tangent.
+        // 计算mMass, tMass, bias, jBias, bounce
+    }
+}
+{% endhighlight %}
+* 约束求解，迭代部分 (碰撞部分)
+## 作者把碰撞和自定义约束的求解放到了一个循环体內
+## 函数 **cpArbiterApplyImpulse** 中计算公式 **1_4** 中的冲量 \(\vec{J}\),并施加到对应物体上,立即改变对应物体的速度状态
+
+{% highlight  C %}
+// Run the impulse solver.
+for(int i=0; i<space->iterations; i++){
+    // 碰撞约束
+    for(int j=0; j<arbiters->num; j++){
+	cpArbiterApplyImpulse((cpArbiter *)arbiters->arr[j]);
+    }
+
+    // 自定义约束
+    for(int j=0; j<constraints->num; j++){
+        //...
+    }
+}
+{% endhighlight %}
