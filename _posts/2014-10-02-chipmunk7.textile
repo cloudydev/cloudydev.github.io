@@ -54,21 +54,21 @@ p.
 
 h2. Body & Shape
 
-Body代表一个具体的物体，实现很简单，值得留意的是里面定义的sleeping结构体，用来做物体的睡眠检测
+cpBody代表一个具体的物体，实现很简单，chipmunk 7 定义了三种物体类型: 
 
 {% highlight  C %}
-struct cpBody {
-	// members ... 
-
-	struct {
-		cpBody *root;
-		cpBody *next;
-		cpFloat idleTime;
-	} sleeping;
-};
+typedef enum cpBodyType {
+	CP_BODY_TYPE_DYNAMIC,
+	CP_BODY_TYPE_KINEMATIC,
+	CP_BODY_TYPE_STATIC,
+} cpBodyType;
 {% endhighlight %}
 
-Shape用来定义一个物体的具体形状，也是用来做碰撞检测的基本单元，chipmunk只定义了三种形状
+**static**: 质量无穷大，位置固定，速度为 0 的物体，而且不会因为被施加了外力或者发生碰撞而改变运动状态。
+**dynamic**: 有一定质量的物体，外力施加到上面或发生碰撞时会改变运动状态。
+**kinematic**: 同static物体类似，不响应外力作用和碰慌效果，但是有一定质量，自身可以有速度的物体。
+
+Shape用来定义一个物体的具体形状，也是用来做碰撞检测的基本单元，chipmunk 7 定义了三种形状类型：
 
 {% highlight  C %}
 typedef enum cpShapeType{
@@ -210,8 +210,8 @@ struct cpSpace {
 {% endhighlight %}
 p.  
 
-**idleSpeedThreshold**: 速度阀值，当物体的速度小于这个值时，可以近似的认为这个物体是静止的
-**sleepTimeTreshold**: 时间阀值，当物体保持静止状态的时间超过这个值时，这个物体才允许进入休眠状态
+**idleSpeedThreshold**: 速度阀值，当物体的速度小于这个值时，可以近似的认为这个物体是静止的。
+**sleepTimeTreshold**: 时间阀值，当物体保持静止的时间超过这个值时，我们认为这个物体是处于静止状态。
 
 p.  
 
@@ -268,6 +268,39 @@ if(sleep){
 p.  
 
 * **contact graph**
+
+考虑到物体之间的碰撞作用，当有多个物体参与了碰撞时，即使其中一个物体达到了休眠的条件，我们也无法简单的就将这个物体休眠掉。比如下图这种情况：
+
+A 与 B 发生碰撞，B 和 C 之间有接触碰撞，虽然 C 物体已经满足休眠条件，但是 A 与 B 碰撞之后必定会改变 C 物体的状态，因此 C 物体在下一帧时会重新被唤醒，这种情况下的休眠就没有什么意义了。
+
+因此，一个动态物体进入休眠状态需要两个条件：
+
+p(. 1. 这个物体要处于静止状态
+2. 与这个物体有 %{color:RED}接触关系% (包括碰撞接触和约束关系) 的物体都处于静止状态。
+
+更进一步说，当满足上述条件时，有接触关系的一族物体都可以进入休眠状态。我们把物体当作节点，接触关系当作边，很容易用一张图来表示物体之间的接触关系，这个就是 contact graph。
+
+<div class="figure">
+<img src="/data/contact_graph.png">
+</div>
+
+chipmunk 7 用邻接表来表示这张 contact graph: cpBody 的结构体里定义了一个 sleeping 结构体来存储接触关系，每个cpBody里面都缓存了一份与这个物体有关的碰撞对列表 *arbiterList*, 因此用 DFS 构建 contact graph 的过程很简单
+
+{% highlight  C %}
+struct cpBody {
+	// ... 
+        cpArbiter *arbiterList;
+      
+        // ...
+	struct {
+		cpBody *root;
+		cpBody *next;
+		cpFloat idleTime;
+	} sleeping;
+};
+{% endhighlight %}
+
+p.  
 
 * **休眠**
 
