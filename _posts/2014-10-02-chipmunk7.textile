@@ -104,7 +104,7 @@ $$ index = type_a + type_b \cdot \text{CP_NUM_SHAPES};$$
   -------------------------------------------------------------------------
 </pre>
 
-// TODO 碰撞算法
+p.  
 
 h2. Time step
 
@@ -130,7 +130,7 @@ cpSpaceStep(cpSpace *space, cpFloat dt)
 
 p.  
 
-h3. 初始化
+h3. 1. 初始化
 
 p. 
 
@@ -171,7 +171,7 @@ cpSpaceStep(cpSpace *space, cpFloat dt)
 
 p.  
 
-h3. 位置 & 速度积分
+h3. 2. 位置 & 速度积分
 
 物体的位置和速度的积分逻辑被封装成了对应的函数，作为Body结构的成员之一：
 
@@ -187,15 +187,95 @@ struct cpBody {
 
 chipmunk对这部分的积分用了最简单的["欧拉积分":http://en.wikipedia.org/wiki/Euler_method] ，对位置的积分放到了速度积分的前面(?)。
 
-h3. 碰撞检测
+h3. 3. 碰撞检测
 
 TODO
 
-h3. 睡眠检测
+h3. 4. 休眠检测
 
-TODO
+物体睡眠相关的实现在cpSpaceComponent.c里面，在cpSpace结构体里定义了两个阀值:
 
-h3. 约束求解
+{% highlight  C %}
+struct cpSpace {
+	// ...
+	
+	cpVect gravity;
+	cpFloat damping;
+	
+	cpFloat idleSpeedThreshold;
+	cpFloat sleepTimeThreshold;
+
+        // ...
+}
+{% endhighlight %}
+p.  
+
+**idleSpeedThreshold**: 速度阀值，当物体的速度小于这个值时，可以近似的认为这个物体是静止的
+**sleepTimeTreshold**: 时间阀值，当物体保持静止状态的时间超过这个值时，这个物体才允许进入休眠状态
+
+p.  
+
+{% highlight  C %}
+void
+cpSpaceStep(cpSpace *space, cpFloat dt)
+{
+    // ...
+    // 碰撞检测
+    // 睡眠检测
+    cpSpaceProcessComponents(space, dt);
+    {
+	cpBool sleep = (space->sleepTimeThreshold != INFINITY);
+	cpArray *bodies = space->dynamicBodies;
+        
+        // 更新静止时间	
+	// 唤醒正在活动的物体
+        // 更新contact graph
+        // 休眠满足条件的物体
+    }
+    
+    // ...
+}
+{% endhighlight %}
+
+p. 
+
+* **更新静止时间**
+chipmunk对于静止状态的判定是根据物体动能的大小，根据 cpSpace 里定义的速度阀值，可以计算出每个物体的最小动能，当物体的动能低于这个最小值时，累积它的静止时间：
+
+p. 
+
+{% highlight  C %}
+// Calculate the kinetic energy of all the bodies.
+if(sleep){
+      cpFloat dv = space->idleSpeedThreshold;
+      cpFloat dvsq = (dv ? dv*dv : cpvlengthsq(space->gravity)*dt*dt);
+		
+      // update idling and reset component nodes
+      for(int i=0; i<bodies->num; i++){
+	    cpBody *body = (cpBody*)bodies->arr[i];
+			
+	    // TODO should make a separate array for kinematic bodies.
+	    if(cpBodyGetType(body) != CP_BODY_TYPE_DYNAMIC) continue;
+			
+	    // Need to deal with infinite mass objects
+	    cpFloat keThreshold = (dvsq ? body->m*dvsq : 0.0f);
+	    ody->sleeping.idleTime = (cpBodyKineticEnergy(body) > keThreshold ?
+                                      0.0f : body->sleeping.idleTime + dt);
+      }
+}
+{% endhighlight %}
+
+p.  
+
+* **contact graph**
+
+* **休眠**
+
+* **唤醒**
+
+p.  
+
+h3. 5. 约束求解
 
 约束求解的部分被分成了两个步骤, 常量计算部分和迭代计算部分，两个步骤之间插入了一步速度积分的过程
 
