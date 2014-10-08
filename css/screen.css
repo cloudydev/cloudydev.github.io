@@ -16,7 +16,8 @@ html, body {
 }
 
 body {
-  background-color: white;
+  background: #F5F5F0;
+  color: #3B3B3B;
   font: 13.34px lucida-console, helvetica, arial, clean, sans-serif;
   *font-size: small;
   text-align: center;
@@ -165,7 +166,7 @@ ul.posts {
     color: 000;
     background-color: white;
     box-shadow: rgb(119, 119, 119) 1px 1px 1px 1px;
-    border-style: dashed;
+    border-style: solid;
     border-width: 1px;
     border-color: #aaaaaa;
     font-size: 15px;
@@ -217,7 +218,7 @@ ul.posts {
     background-color: #333;
   }
 
-  #post .MathJax {
+  #post .MathJax_Display {
     color:#004697;
   }
 
@@ -227,14 +228,14 @@ ul.posts {
   }
 
   #post h2 {
-    color:#b81d18;
-    font-size:130%;
+    color:#004687;
+    border-bottom: 1px solid #CCC;
+    font-size:115%;
   }
 
   #post h3 {
-    color:#004687;
+    color:#b81d18;
     font-size:105%;
-    font-style:italic;
   }
 
   #related {
