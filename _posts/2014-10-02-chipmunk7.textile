@@ -106,6 +106,34 @@ $$ index = type_a + type_b \cdot \text{CP_NUM_SHAPES};$$
 
 p.  
 
+h2. Space
+
+space 是存储所有物体的容器，作为物体之间发生碰撞的环境（代码只贴了一部分，其他成员在下文会有介绍）：
+
+**stamp**: 当前世界的时间
+**dynamicBodies, staticBodies**: 动态、静态物体列表
+**dynamicShapes, staticShapes**: 动态，静态物体的加速结构
+
+p.  
+
+{% highlight  C %}
+struct cpSpace {
+    
+    cpTimestamp stamp;
+    cpFloat curr_dt;
+
+    cpArray *dynamicBodies;
+    cpArray *staticBodies;
+	
+    cpSpatialIndex *staticShapes;
+    cpSpatialIndex *dynamicShapes;
+
+    /* other members */
+};
+{% endhighlight %}
+
+p. 
+
 h2. Time step
 
 time step是最重要的部分，实现在Space/cpSpaceStep.c里：
@@ -171,7 +199,115 @@ chipmunk对这部分的积分用了最简单的["欧拉积分":http://en.wikiped
 
 h3. 3. 碰撞检测
 
-TODO
+p. 
+
+* chipmunk 7 里提供了三种加速结构体：
+
+p(. 1. cpSweep1D: 仅实现了在x轴向上的sweep and prone算法
+2. cpSpatialHash: 空间网格划分
+3. cpBBTree: 体积树，chipmunk默认使用
+
+p.  所有的加速结构都需要实现 **cpSpatialIndexClass** 里声明的函数以提供基本的遍历、添加、删除、更新、碰撞查询操作，
+
+{% highlight  C %}
+struct cpSpatialIndexClass {
+    /* other menbers */	
+
+    /* 更新 */
+    cpSpatialIndexReindexImpl reindex;
+    cpSpatialIndexReindexObjectImpl reindexObject;
+    cpSpatialIndexReindexQueryImpl reindexQuery;
+	
+    cpSpatialIndexQueryImpl query;
+    cpSpatialIndexSegmentQueryImpl segmentQuery;
+};
+
+/* 更新物体Obj的AABB，更新加速结构*/
+typedef void (*cpSpatialIndexReindexObjectImpl)(cpSpatialIndex *index, 
+                                      void *obj, 
+                                      cpHashValue hashid);
+
+/* 碰撞对查询，以查询到的碰撞对作为参调用回调函数func */
+typedef void (*cpSpatialIndexReindexQueryImpl)(cpSpatialIndex *index, 
+                                      cpSpatialIndexQueryFunc func,
+                                      void *data);
+
+/* 碰撞查询的回调*/
+typedef cpCollisionID (*cpSpatialIndexQueryFunc)(void *obj1, 
+                                                void *obj2, 
+                                                cpCollisionID id, 
+                                                void *data);
+{% endhighlight %}
+
+p. 整个碰撞检测的流程很简单：
+
+{% highlight  C %}
+cpSpaceLock(space); {
+    /* 2 位置积分 */
+    
+    /* 3 碰撞检测*/
+    /* 3.1 创建存储触点的buffer */
+    cpSpacePushFreshContactBuffer(space);
+    /* 3.2 更新物体的AABB*/
+    cpSpatialIndexEach(
+                      space->dynamicShapes,
+                      (cpSpatialIndexIteratorFunc)cpShapeUpdateFunc,
+                      NULL);
+    /* 3.3 查找碰撞对*/
+    cpSpatialIndexReindexQuery(
+                      space->dynamicShapes,
+                      (cpSpatialIndexQueryFunc)cpSpaceCollideShapes, 
+                      space);
+} cpSpaceUnlock(space, cpFalse);
+{% endhighlight %}
+
+p.  
+
+* contact buffer
+
+首先，在 cpSpace 里定义了一个碰撞对的生命周期，超过生命周期的碰撞对就会被删除掉
+
+{% highlight  C %}
+struct cpSpace {
+    /* members */
+    cpTimestamp collisionPersistence;	
+    /* members */
+}
+{% endhighlight %}
+
+
+由于碰撞检测过程中会生成很多触点的数据，需要在碰撞检测之间创建一个足够大的 buffer 来存储触点数据，chipmunk 用了一个环形的链表作为存储触点buffer，由于我们只考虑在生命周期內的碰撞对，所以这个环形链表只需要 collisionPersistence  个结点就足够了：
+
+p. 
+
+{% highlight  C %}
+void
+cpSpacePushFreshContactBuffer(cpSpace *space)
+{
+    cpTimestamp stamp = space->stamp;
+    
+    cpContactBufferHeader *head = space->contactBuffersHead;
+    
+    if(!head){
+        /* 分配一个存储节点当做头结点*/
+    } else if(stamp - head->next->stamp > space->collisionPersistence){
+        /* 头结点和尾结点的时间差超过了碰撞生命周期，可以被重复利用 */
+        cpContactBufferHeader *tail = head->next;
+        space->contactBuffersHead = cpContactBufferHeaderInit(tail, stamp, tail);
+    } else {
+        /* 分配一个新的存储结点*/
+    }
+}
+{% endhighlight %}
+
+
+p.  
+
+* 计算触点
+
+// TODO
+
+p. 
 
 h3. 4. 休眠检测
 
@@ -180,9 +316,6 @@ h3. 4. 休眠检测
 {% highlight  C %}
 struct cpSpace {
     /* other menbers */
-	
-    cpVect gravity;
-    cpFloat damping;
 	
     cpFloat idleSpeedThreshold;
     cpFloat sleepTimeThreshold;
@@ -515,9 +648,11 @@ p.
 
 * 碰撞方程-迭代部分
 
+TODO 没有弄明白
+
 p.  
 
-作者把碰撞和自定义约束的求解放到了一个循环体內，在**cpArbiterApplyImpulse** 中计算公式 **1_4** 中的冲量 \(\vec{J}\)，作用到物体上立即改变速度状态：
+作者把碰撞和自定义约束的求解放到了一个循环体內，在 **cpArbiterApplyImpulse** 中计算公式 **1_4** 中的冲量 \(\vec{J}\)，作用到物体上立即改变速度状态：
 
 p. 
 
@@ -540,8 +675,7 @@ cpArbiterApplyImpulse(cpArbiter *arb)
 
 * 施加缓存的冲量
 
-碰撞的持续时间
-TODO
+TODO 没有弄明白
 
 $$
 \vec{J} = \int \vec{F} dt
