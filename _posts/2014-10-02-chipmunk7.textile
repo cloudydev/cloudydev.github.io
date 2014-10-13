@@ -114,16 +114,14 @@ time step是最重要的部分，实现在Space/cpSpaceStep.c里：
 void
 cpSpaceStep(cpSpace *space, cpFloat dt)
 {
-    /*
-      1. 初始化
-      2. 位置积分
-      3. 碰撞检测
-      4. 休眠检测
-      5. 约束求解-常量部分
-      6. 速度积分
-      7. 叠加缓存冲量
-      8. 约束求解-迭代部分
-    */
+    /* 1 初始化 */
+    /* 2 位置积分 */
+    /* 3 碰撞检测 */
+    /* 4 休眠检测 */
+    /* 5 约束求解-常量部分 */
+    /* 6 速度积分 */
+    /* 7 叠加缓存冲量 */
+    /* 8 约束求解-迭代部分 */
 }
 {% endhighlight %}
 
@@ -134,37 +132,23 @@ h3. 1. 初始化
 p. 
 
 {% highlight  C %}
-void
-cpSpaceStep(cpSpace *space, cpFloat dt)
-{
-    if(dt == 0.0f) return;
+if(dt == 0.0f) return;
 
-    /* 初始化相关变量：*/
-    space->stamp++;
-	
-    cpFloat prev_dt = space->curr_dt;
-    space->curr_dt = dt;
-		
-    cpArray *bodies = space->dynamicBodies;
-    cpArray *constraints = space->constraints;
-    cpArray *arbiters = space->arbiters;
+/* 初始化相关变量：*/
 
-    /* 更新碰撞对状态：*/
-    // Reset and empty the arbiter lists.
-    for(int i=0; i<arbiters->num; i++){
-	cpArbiter *arb = (cpArbiter *)arbiters->arr[i];
-	arb->state = CP_ARBITER_STATE_NORMAL;
-		
-        /* 删除无效的碰撞对：*/
-	if(!cpBodyIsSleeping(arb->body_a) && !cpBodyIsSleeping(arb->body_b)){
-	    cpArbiterUnthread(arb);
-	}
+/* 更新碰撞对状态 */
+for(int i=0; i<arbiters->num; i++){
+    cpArbiter *arb = (cpArbiter *)arbiters->arr[i];
+    arb->state = CP_ARBITER_STATE_NORMAL;
+            
+    /* 删除无效的碰撞对 */
+    if(!cpBodyIsSleeping(arb->body_a) && !cpBodyIsSleeping(arb->body_b)){
+        cpArbiterUnthread(arb);
     }
-    arbiters->num = 0;
-
-    /* ... */
 }
+arbiters->num = 0;
 
+/* ... */
 {% endhighlight %}
 
 p.  
@@ -217,18 +201,16 @@ cpSpaceStep(cpSpace *space, cpFloat dt)
 {
     /* ... */
     
-    /* 4. 睡眠检测: */
+    /* 4 睡眠检测: */
     cpSpaceProcessComponents(space, dt);
     {
         cpBool sleep = (space->sleepTimeThreshold != INFINITY);
         cpArray *bodies = space->dynamicBodies;
         
-        /*
-          4.1. 更新静止时间	
-	  4.2. 唤醒受到干扰的物体
-          4.3. 创建contact graph
-          4.4. 休眠满足条件的物体
-        */
+        /* 4.1 更新静止时间 */	
+	/* 4.2 唤醒受到干扰的物体 */
+        /* 4.3 创建contact graph */
+        /* 4.4 休眠满足条件的物体 */
     }
     
     /* ... */
@@ -247,7 +229,7 @@ p.
 
 {% highlight  C %}
 if(sleep){
-    /* 4.1. 更新静止时间 */
+    /* 4.1 更新静止时间 */
     cpFloat dv = space->idleSpeedThreshold;
     cpFloat dvsq = (dv ? dv*dv : cpvlengthsq(space->gravity)*dt*dt);
 		
@@ -306,7 +288,7 @@ p.
 for(int i=0; i<bodies->num;){
     cpBody *body = (cpBody*)bodies->arr[i];
     
-    /* 4.3. 创建contact graph */
+    /* 4.3 创建contact graph */
     if(ComponentRoot(body) == NULL){
         /** 以body为根节点，DFS 生成 contact graph: **/
         FloodFillComponent(body, body);
@@ -315,7 +297,7 @@ for(int i=0; i<bodies->num;){
         if(!ComponentActive(body, space->sleepTimeThreshold)){
             cpArrayPush(space->sleepingComponents, body);
 
-            /** 4.4. 休眠满足条件的物体: **/
+            /** 4.4 休眠满足条件的物体: **/
             CP_BODY_FOREACH_COMPONENT(body, other) 
                 cpSpaceDeactivateBody(space, other);
             
@@ -375,7 +357,7 @@ p(. 1. 有其他正在活动的物体发生了碰撞
 
 {% highlight  C %}
 
-/* 4.2. 唤醒受到干扰的物体 */
+/* 4.2 唤醒受到干扰的物体 */
 cpArray *arbiters = space->arbiters;
 for(int i=0, count=arbiters->num; i<count; i++){
     if (sleep) {
@@ -389,8 +371,8 @@ if(sleep){
        /* 唤醒与kinematic物体有约束关系的物体 */
     }
 
-    /* 4.3. 创建contact graph */
-    /* 4.4. 休眠满足条件的物体 */
+    /* 4.3 创建contact graph */
+    /* 4.4 休眠满足条件的物体 */
 }
 {% endhighlight %}
 
@@ -455,7 +437,7 @@ cpSpaceStep(cpSpace *space, cpFloat dt)
 	    constraint->klass->preStep(constraint, dt);
       	}
     /* 6 速度积分 */
-    /* 7 叠加缓存冲量 */ 
+    /* 7 施加缓存冲量 */ 
     /* 8 约束求解-迭代部分 */
         for(int i=0; i<space->iterations; i++){
             /* 8.1 求解碰撞方程，迭代部分*/
@@ -530,6 +512,7 @@ cpArbiterPreStep(cpArbiter *arb, cpFloat dt, cpFloat slop, cpFloat bias)
 
 p. 
 
+
 * 碰撞方程-迭代部分
 
 p.  
@@ -554,5 +537,20 @@ cpArbiterApplyImpulse(cpArbiter *arb)
     }
 }
 {% endhighlight %}
+
+* 施加缓存的冲量
+
+碰撞的持续时间
+TODO
+
+$$
+\vec{J} = \int \vec{F} dt
+$$
+
+
+<div class="figure">
+<img src="/data/impluse.png">
+</div>
+
 
 
