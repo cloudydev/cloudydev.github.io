@@ -1,11 +1,11 @@
 ---
 layout: post
-title: chipmunk 7 代码实现
+title: Chipmunk2D Version 7.0.0 代码实现
 ---
 
 h1. 工程
 
-真正有用的代码在 include 和 src 文件夹下面，代码量不到1w行:
+代码取自 Chipmunk2D 的 ["GitHub仓库":https://github.com/slembcke/Chipmunk2D] 的master branch，最新的开发版本是7.0.0，真正有用的代码在 include 和 src 文件夹下面，代码量不到1w行:
 
 <pre class="table">
 [roc : Chipmunk2D]$: cloc include/ src/
@@ -35,26 +35,16 @@ p.
 
 h2. Basics
 
-Basics下面是chipmunk里面用到的基本数据结构，包括两种存储容器：数组 (cpArray )和哈希表 (cpHashSet)，向量 (cpVec), AABB包围体 (cpBB), 和变换矩阵(cpTransform)。
+Basics 下面是 Chipmunk2D 里面用到的基本数据结构，包括：
 
-其中变换矩阵是由一个旋转缩放矩阵 \( \begin{pmatrix} a & b \\ c & d \end{pmatrix} \) ，另外加上一个位移分量 \( \begin{pmatrix} tx \\ ty \end{pmatrix} \) 
-
-{% highlight  C %}
-#if CP_USE_CGTYPES
-    typedef CGAffineTransform cpTransform;
-#else
-    /// Column major affine transform.
-    typedef struct cpTransform {
-    	cpFloat a, b, c, d, tx, ty;
-    } cpTransform;
-#endif
-{% endhighlight %}
+p(. 存储容器：数组（cpArray.c）和哈希表（cpHashSet.h）
+数学运算：向量（cpVect.h）、AABB包围体（cpBB.h）、和变换矩阵（cpTransform.h）
 
 p. 
 
 h2. Body & Shape
 
-cpBody代表一个具体的物体，实现很简单，chipmunk 7 定义了三种物体类型: 
+Chipmunk2D 里定义了三种物体类型：
 
 {% highlight  C %}
 typedef enum cpBodyType {
@@ -64,11 +54,11 @@ typedef enum cpBodyType {
 } cpBodyType;
 {% endhighlight %}
 
-**static**: 质量无穷大，位置固定，速度为 0 的物体，而且不会因为外力作用或者碰撞而改变运动状态。
-**dynamic**: 有一定质量的物体，外力施加到上面或发生碰撞时会改变运动状态。
-**kinematic**: 同static物体类似，不响应外力作用和碰慌效果，但是有一定质量，自身可以有速度的物体。
+p(. **DYNAMIC**: 有一定质量的物体，外力施加到上面或发生碰撞时会改变运动状态
+**STATIC**: 质量无穷大，位置固定，速度为 0 的物体，而且不会因为外力作用或者碰撞而改变运动状态
+**KINEMATIC**: 同static物体类似，不响应外力作用和碰慌效果，但是有一定质量，自身可以有速度的物体
 
-Shape用来定义一个物体的具体形状，也是用来做碰撞检测的基本单元，chipmunk 7 定义了三种形状类型：
+Chipmunk2D 定义了三种形状类型：
 
 {% highlight  C %}
 typedef enum cpShapeType{
@@ -108,27 +98,26 @@ p.
 
 h2. Space
 
-space 是存储所有物体的容器，作为物体之间发生碰撞的环境（代码只贴了一部分，其他成员在下文会有介绍）：
+cpSpace 是存储所有物体的容器，作为物体之间发生碰撞的环境（代码只贴了一部分，其他成员在下文会有介绍）：
 
-**stamp**: 当前世界的时间
-**dynamicBodies, staticBodies**: 动态、静态物体列表
-**dynamicShapes, staticShapes**: 动态，静态物体的加速结构
+p(. **stamp** ：当前世界的时间
+**dynamicBodies** ：世界中所有动态物体列表 
+**staticBodies** ：所有静态物体列表
+**dynamicShapes** ： 动态物体的加速结构
+**staticShapes** ：静态物体的加速结构
 
 p.  
 
 {% highlight  C %}
+"定义在cpSpace.h, cpSpace.c"
 struct cpSpace {
-    
     cpTimestamp stamp;
-    cpFloat curr_dt;
 
     cpArray *dynamicBodies;
     cpArray *staticBodies;
 	
     cpSpatialIndex *staticShapes;
     cpSpatialIndex *dynamicShapes;
-
-    /* other members */
 };
 {% endhighlight %}
 
@@ -136,7 +125,7 @@ p.
 
 h2. Time step
 
-time step是最重要的部分，实现在Space/cpSpaceStep.c里：
+time step是最重要的部分，实现在 cpSpaceStep.c 里：
 
 {% highlight  C %}
 void
@@ -162,21 +151,19 @@ p.
 {% highlight  C %}
 if(dt == 0.0f) return;
 
-/* 初始化相关变量：*/
+// 初始化相关变量
 
-/* 更新碰撞对状态 */
+// 更新碰撞对状态
 for(int i=0; i<arbiters->num; i++){
     cpArbiter *arb = (cpArbiter *)arbiters->arr[i];
     arb->state = CP_ARBITER_STATE_NORMAL;
             
-    /* 删除无效的碰撞对 */
+    // 删除无效的碰撞对
     if(!cpBodyIsSleeping(arb->body_a) && !cpBodyIsSleeping(arb->body_b)){
         cpArbiterUnthread(arb);
     }
 }
 arbiters->num = 0;
-
-/* ... */
 {% endhighlight %}
 
 p.  
@@ -187,91 +174,86 @@ h3. 2. 位置 & 速度积分
 
 {% highlight  C %}
 struct cpBody {
-    // Integration functions
     cpBodyVelocityFunc velocity_func;
     cpBodyPositionFunc position_func;
-	
-    /* other menbers */
 }
 {% endhighlight %}
 
-chipmunk对这部分的积分用了最简单的["欧拉积分":http://en.wikipedia.org/wiki/Euler_method] ，对位置的积分放到了速度积分的前面(?)。
+Chipmunk2D 对这部分的积分用了最简单的["欧拉积分":http://en.wikipedia.org/wiki/Euler_method] ，对位置的积分放到了速度积分的前面(?)。
+
+%{color:RED}TODO%
+位置和速度积分的位置顺序的作用?
 
 h3. 3. 碰撞检测
-
-p. 
-
-* chipmunk 7 里提供了三种加速结构体：
-
-p(. 1. cpSweep1D: 仅实现了在x轴向上的sweep and prone算法
-2. cpSpatialHash: 空间网格划分
-3. cpBBTree: 体积树，chipmunk默认使用
-
-p.  所有的加速结构都需要实现 **cpSpatialIndexClass** 里声明的函数以提供基本的遍历、添加、删除、更新、碰撞查询操作，
-
-{% highlight  C %}
-struct cpSpatialIndexClass {
-    /* other menbers */	
-
-    /* 更新 */
-    cpSpatialIndexReindexImpl reindex;
-    cpSpatialIndexReindexObjectImpl reindexObject;
-    cpSpatialIndexReindexQueryImpl reindexQuery;
-	
-    cpSpatialIndexQueryImpl query;
-    cpSpatialIndexSegmentQueryImpl segmentQuery;
-};
-
-/* 更新物体Obj的AABB，更新加速结构*/
-typedef void (*cpSpatialIndexReindexObjectImpl)(cpSpatialIndex *index, 
-                                      void *obj, 
-                                      cpHashValue hashid);
-
-/* 碰撞对查询，以查询到的碰撞对作为参调用回调函数func */
-typedef void (*cpSpatialIndexReindexQueryImpl)(cpSpatialIndex *index, 
-                                      cpSpatialIndexQueryFunc func,
-                                      void *data);
-
-/* 碰撞查询的回调*/
-typedef cpCollisionID (*cpSpatialIndexQueryFunc)(void *obj1, 
-                                                void *obj2, 
-                                                cpCollisionID id, 
-                                                void *data);
-{% endhighlight %}
 
 p. 整个碰撞检测的流程很简单：
 
 {% highlight  C %}
 cpSpaceLock(space); {
-    /* 2 位置积分 */
+    /* 
+    2 位置积分
+    */
     
-    /* 3 碰撞检测*/
-    /* 3.1 创建存储触点的buffer */
+    /* 
+    3 碰撞检测
+    */
+    // 3.1 创建 Contact Buffer
     cpSpacePushFreshContactBuffer(space);
-    /* 3.2 更新物体的AABB*/
-    cpSpatialIndexEach(
-                      space->dynamicShapes,
+    
+    // 3.2 计算物体的AABB, 更新加速结构*/
+    cpSpatialIndexEach(space->dynamicShapes,
                       (cpSpatialIndexIteratorFunc)cpShapeUpdateFunc,
                       NULL);
-    /* 3.3 查找碰撞对*/
-    cpSpatialIndexReindexQuery(
-                      space->dynamicShapes,
+   
+    // 3.3 Broad Phase 检索碰撞对
+    // 3.4 cpSpaceCollideShapes 回调，Narrow Phase 碰撞检测
+    cpSpatialIndexReindexQuery(space->dynamicShapes,
                       (cpSpatialIndexQueryFunc)cpSpaceCollideShapes, 
                       space);
 } cpSpaceUnlock(space, cpFalse);
 {% endhighlight %}
 
+p. 
+
+* 加速结构
+
+p.  Chipmunk2D 里的加速结构需要实现 **cpSpatialIndexClass** 里声明的函数以提供基本的遍历、添加、删除、更新、碰撞查询操作，目前的版本中，Chipmunk2D 提供了三种加速结构：
+
+p(. 1. X 轴向上的 Sweep and Prone，实现在 cpSweep1D.c 里
+2. 空间网格划分，实现在 cpSpatialHash.c 里
+3. 体积树，Chipmunk2D 里默认使用的结构，实现在 cpBBTree.c 里
+
+{% highlight  C %}
+"完整定义和函数指针的声明参见 cpSpatialIndex.h"
+struct cpSpatialIndexClass {
+    // 更新加速结构
+    cpSpatialIndexReindexImpl reindex;
+
+    // 物体因为运动导致 AABB 发生改变，调用此函数更新加速结构
+    cpSpatialIndexReindexObjectImpl reindexObject;
+
+    // broad phase 碰撞对查询，以回调的方式处理查询输出的碰撞对
+    cpSpatialIndexReindexQueryImpl reindexQuery;
+};
+{% endhighlight %}
+
+p. 
+
+* Broad Phase
+
 p.  
 
-* contact buffer
+* Narrow Phase
+
+p.  
+
+* Contact Buffer
 
 首先，在 cpSpace 里定义了一个碰撞对的生命周期，超过生命周期的碰撞对就会被删除掉
 
 {% highlight  C %}
 struct cpSpace {
-    /* members */
     cpTimestamp collisionPersistence;	
-    /* members */
 }
 {% endhighlight %}
 
@@ -289,13 +271,13 @@ cpSpacePushFreshContactBuffer(cpSpace *space)
     cpContactBufferHeader *head = space->contactBuffersHead;
     
     if(!head){
-        /* 分配一个存储节点当做头结点*/
+        // 分配一个存储节点当做头结点
     } else if(stamp - head->next->stamp > space->collisionPersistence){
-        /* 头结点和尾结点的时间差超过了碰撞生命周期，可以被重复利用 */
+        // 头结点和尾结点的时间差超过了碰撞生命周期，可以被重复利用 
         cpContactBufferHeader *tail = head->next;
         space->contactBuffersHead = cpContactBufferHeaderInit(tail, stamp, tail);
     } else {
-        /* 分配一个新的存储结点*/
+        // 分配一个新的存储结点
     }
 }
 {% endhighlight %}
@@ -305,7 +287,7 @@ p.
 
 * 计算触点
 
-// TODO
+%{color:RED}TODO%
 
 p. 
 
@@ -315,15 +297,13 @@ h3. 4. 休眠检测
 
 {% highlight  C %}
 struct cpSpace {
-    /* other menbers */
-	
     cpFloat idleSpeedThreshold;
     cpFloat sleepTimeThreshold;
 }
 {% endhighlight %}
 p.  
 
-**idleSpeedThreshold**: 速度阀值，当物体的速度小于这个值时，可以近似的认为这个物体是静止的。
+p(. **idleSpeedThreshold**: 速度阀值，当物体的速度小于这个值时，可以近似的认为这个物体是静止的。
 **sleepTimeTreshold**: 时间阀值，当物体保持静止的时间超过这个值时，我们认为这个物体是处于静止状态。
 
 p.  
@@ -332,21 +312,19 @@ p.
 void
 cpSpaceStep(cpSpace *space, cpFloat dt)
 {
-    /* ... */
-    
-    /* 4 睡眠检测: */
+    /* 
+    4 睡眠检测: 
+    */
     cpSpaceProcessComponents(space, dt);
     {
         cpBool sleep = (space->sleepTimeThreshold != INFINITY);
         cpArray *bodies = space->dynamicBodies;
         
-        /* 4.1 更新静止时间 */	
-	/* 4.2 唤醒受到干扰的物体 */
-        /* 4.3 创建contact graph */
-        /* 4.4 休眠满足条件的物体 */
+        // 4.1 更新静止时间
+	// 4.2 唤醒受到干扰的物体
+        // 4.3 创建contact graph
+        // 4.4 休眠满足条件的物体
     }
-    
-    /* ... */
 }
 {% endhighlight %}
 
@@ -362,7 +340,7 @@ p.
 
 {% highlight  C %}
 if(sleep){
-    /* 4.1 更新静止时间 */
+    // 4.1 更新静止时间
     cpFloat dv = space->idleSpeedThreshold;
     cpFloat dvsq = (dv ? dv*dv : cpvlengthsq(space->gravity)*dt*dt);
 		
@@ -397,12 +375,10 @@ p(. 1. 这个物体要处于静止状态
 <img src="/data/contact_graph.png">
 </div>
 
-chipmunk 7 用邻接表来表示这张 contact graph: cpBody 的结构体里定义了一个 sleeping 结构体来存储接触关系，每个物体的实例里面都缓存了一份与这个物体有关的碰撞对列表 **arbiterList** 和约束列表 **constraintList**
+Chipmunk2D 用邻接表来实现这张 contact graph: cpBody 的结构体里定义了一个 sleeping 结构体来存储接触关系，每个物体的实例里面都缓存了一份与这个物体有关的碰撞对列表 **arbiterList** 和约束列表 **constraintList**
 
 {% highlight  C %}
 struct cpBody {
-    /* other members */
-    
     cpArbiter *arbiterList;
     cpConstraint *constraintList;
       
@@ -421,16 +397,16 @@ p.
 for(int i=0; i<bodies->num;){
     cpBody *body = (cpBody*)bodies->arr[i];
     
-    /* 4.3 创建contact graph */
+    // 4.3 创建contact graph
     if(ComponentRoot(body) == NULL){
-        /** 以body为根节点，DFS 生成 contact graph: **/
+        // 以 body 为根节点，DFS 生成 contact graph
         FloodFillComponent(body, body);
        
-        /** 遍历这张 contact graph，判断是否满足休眠条件:**/
+        // 遍历这张 contact graph，判断是否满足休眠条件
         if(!ComponentActive(body, space->sleepTimeThreshold)){
             cpArrayPush(space->sleepingComponents, body);
 
-            /** 4.4 休眠满足条件的物体: **/
+            // 4.4 休眠满足条件的物体
             CP_BODY_FOREACH_COMPONENT(body, other) 
                 cpSpaceDeactivateBody(space, other);
             
@@ -456,22 +432,22 @@ p. 让一个动态物体进入休眠状态是暂时把这个物体当作"静态�
 static void
 cpSpaceDeactivateBody(cpSpace *space, cpBody *body)
 {
-    /* 把物体从 space 的动态物体列表中移除 */
+    // 把物体从 space 的动态物体列表中移除
     cpArrayDeleteObj(space->dynamicBodies, body);
     
-    /* 把物体所包含的所有形状，从动态加速体里移除并添加到静态加速体中 */
+    // 把物体所包含的所有形状，从动态加速体里移除并添加到静态加速体中
     CP_BODY_FOREACH_SHAPE(body, shape){
         cpSpatialIndexRemove(space->dynamicShapes, shape, shape->hashid);
         cpSpatialIndexInsert(space->staticShapes, shape, shape->hashid);
     }
     
-    /** 把休眠物体之间的碰撞对和约束从space的缓存中删除 **/
+    // 把休眠物体之间的碰撞对和约束从space的缓存中删除
     CP_BODY_FOREACH_ARBITER(body, arb){
-        /* implment */
+        /* implement */
     }
             
     CP_BODY_FOREACH_CONSTRAINT(body, constraint){
-        /* implment */
+        /* implement */
     }
 }
 {% endhighlight %}
@@ -489,23 +465,22 @@ p(. 1. 有其他正在活动的物体发生了碰撞
 3. 游戏逻辑强制唤醒一个物体
 
 {% highlight  C %}
-
-/* 4.2 唤醒受到干扰的物体 */
+// 4.2 唤醒受到干扰的物体
 cpArray *arbiters = space->arbiters;
 for(int i=0, count=arbiters->num; i<count; i++){
     if (sleep) {
-       /* 唤醒与kinematic物体碰撞的物体 */
+       // 唤醒与kinematic物体碰撞的物体
     }
 }
 
 if(sleep){
     cpArray *constraints = space->constraints;
     for(int i=0; i<constraints->num; i++){
-       /* 唤醒与kinematic物体有约束关系的物体 */
+       // 唤醒与kinematic物体有约束关系的物体
     }
 
-    /* 4.3 创建contact graph */
-    /* 4.4 休眠满足条件的物体 */
+    // 4.3 创建contact graph
+    // 4.4 休眠满足条件的物体
 }
 {% endhighlight %}
 
@@ -517,18 +492,16 @@ p.
 void
 cpSpaceActivateBody(cpSpace *space, cpBody *body)
 {
-    /* ... */
-
-    /* 把物体添加到 space 的动态物体列表中 */
+    // 把物体添加到 space 的动态物体列表中
     cpArrayPush(space->dynamicBodies, body);
 
-    /* 把物体所包含的所有形状，从静态加速体里移除并添加到动态加速体中 */
+    // 把物体所包含的所有形状，从静态加速体里移除并添加到动态加速体中
     CP_BODY_FOREACH_SHAPE(body, shape){
             cpSpatialIndexRemove(space->staticShapes, shape, shape->hashid);
             cpSpatialIndexInsert(space->dynamicShapes, shape, shape->hashid);
     }
     
-    /** 把休眠物体之间的碰撞对和约束添加到space的缓存中 **/
+    // 把休眠物体之间的碰撞对和约束添加到space的缓存中
     CP_BODY_FOREACH_ARBITER(body, arb){
         /* implement */
     }
@@ -550,35 +523,45 @@ void
 cpSpaceStep(cpSpace *space, cpFloat dt)
 {
     cpSpaceLock(space); {
-    /* 5 约束求解-常量部分 */
-        /* 5.1 过滤无效碰撞体 */
+    /* 
+    5 约束求解-常量部分 
+    */
+        // 5.1 过滤无效碰撞体
         cpHashSetFilter(space->cachedArbiters, 
           (cpHashSetFilterFunc)cpSpaceArbiterSetFilter,
           space);
   
-        /* 5.2 求解碰撞方程，常量部分 */
+        // 5.2 求解碰撞方程，常量部分
         cpFloat slop = space->collisionSlop;
 	cpFloat biasCoef = 1.0f - cpfpow(space->collisionBias, dt);
 	for(int i=0; i<arbiters->num; i++){
             cpArbiterPreStep((cpArbiter *)arbiters->arr[i], dt, slop, biasCoef);
       	}
 
-        /* 5.3 求解自定义约束方程，常量部分 */
+        // 5.3 求解自定义约束方程，常量部分
         for(int i=0; i<constraints->num; i++){
 	    cpConstraint *constraint = (cpConstraint *)constraints->arr[i];
-            /* ... */
+            // ... 
 	    constraint->klass->preStep(constraint, dt);
       	}
-    /* 6 速度积分 */
-    /* 7 施加缓存冲量 */ 
-    /* 8 约束求解-迭代部分 */
+    /* 
+    6 速度积分 
+    */
+
+    /*
+    7 施加缓存冲量
+    */ 
+
+    /* 
+    8 约束求解-迭代部分
+    */
         for(int i=0; i<space->iterations; i++){
-            /* 8.1 求解碰撞方程，迭代部分*/
+            // 8.1 求解碰撞方程，迭代部分
 	    for(int j=0; j<arbiters->num; j++){
 		cpArbiterApplyImpulse((cpArbiter *)arbiters->arr[j]);
 	    }
 	    
-            /* 8.2 求解自定义约束方程,迭代部分 */
+            // 8.2 求解自定义约束方程,迭代部分
 	    for(int j=0; j<constraints->num; j++){
 		cpConstraint *constraint = (cpConstraint *)constraints->arr[j];
 		constraint->klass->applyImpulse(constraint, dt);
@@ -600,15 +583,15 @@ p.
 cpBool
 cpSpaceArbiterSetFilter(cpArbiter *arb, cpSpace *space)
 {       
-    /* 统计碰撞体的持续时间: */
+    // 统计碰撞体的持续时间
     cpTimestamp ticks = space->stamp - arb->stamp;
     cpBody *a = arb->body_a, *b = arb->body_b;
     
     /* ... */
 
-    /* 持续时间超过阀值，碰撞对已经失效 */
+    // 持续时间超过阀值，碰撞对已经失效
     if(ticks >= space->collisionPersistence){
-        /* 回收这个碰撞对的内存 */
+        // 回收这个碰撞对的内存
         arb->contacts = NULL;
 	arb->count = 0;
 		
@@ -638,7 +621,7 @@ cpArbiterPreStep(cpArbiter *arb, cpFloat dt, cpFloat slop, cpFloat bias)
 	
     for(int i=0; i<arb->count; i++){
 	struct cpContact *con = &arb->contacts[i];
-        /* 计算mMass, tMass, bias, jBias, bounce */
+        // 计算mMass, tMass, bias, jBias, bounce
     }
 }
 {% endhighlight %}
@@ -648,7 +631,7 @@ p.
 
 * 碰撞方程-迭代部分
 
-TODO 没有弄明白
+%{color:RED}TODO%
 
 p.  
 
@@ -660,13 +643,13 @@ p.
 void
 cpArbiterApplyImpulse(cpArbiter *arb)
 {
-    /* setup variable ... */
+    // setup variable ... 
   
     for(int i=0; i<arb->count; i++){
         struct cpContact *con = &arb->contacts[i];
-        /* 计算碰撞方向上的冲量jn, 摩擦力方向的冲量jt，Bias冲量jBias*/
-        /* 更新con->jnAcc, con->jtAcc, con->jBias*/
-        /* 将冲量作用到物体上*/
+        // 计算碰撞方向上的冲量jn, 摩擦力方向的冲量jt，Bias冲量jBias
+        // 更新con->jnAcc, con->jtAcc, con->jBias
+        // 将冲量作用到物体上
         apply_bias_impulses( /* params */ );
         apply_impulses( /* params */ );
     }
@@ -675,7 +658,7 @@ cpArbiterApplyImpulse(cpArbiter *arb)
 
 * 施加缓存的冲量
 
-TODO 没有弄明白
+%{color:RED}TODO%
 
 $$
 \vec{J} = \int \vec{F} dt
@@ -685,6 +668,3 @@ $$
 <div class="figure">
 <img src="/data/impluse.png">
 </div>
-
-
-
