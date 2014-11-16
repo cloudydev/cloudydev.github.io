@@ -3,7 +3,7 @@ layout: post
 title: Chipmunk2D Version 7.0.0 代码实现
 ---
 
-h1. 工程
+h1. Overview
 
 代码取自 Chipmunk2D 的 ["GitHub仓库":https://github.com/slembcke/Chipmunk2D] 的master branch，最新的开发版本是7.0.0，真正有用的代码在 include 和 src 文件夹下面，代码量不到1w行:
 
@@ -33,16 +33,16 @@ SUM:                    55              2356          2244              8350
 p.  
 
 
-h2. Basics
+h1. Basics
 
 Basics 下面是 Chipmunk2D 里面用到的基本数据结构，包括：
 
-p(. 存储容器：数组（cpArray.c）和哈希表（cpHashSet.h）
+存储容器：数组（cpArray.c）和哈希表（cpHashSet.h）
 数学运算：向量（cpVect.h）、AABB包围体（cpBB.h）、和变换矩阵（cpTransform.h）
 
 p. 
 
-h2. Body & Shape
+h1. Body and shape
 
 Chipmunk2D 里定义了三种物体类型：
 
@@ -54,9 +54,9 @@ typedef enum cpBodyType {
 } cpBodyType;
 {% endhighlight %}
 
-p(. **DYNAMIC**: 有一定质量的物体，外力施加到上面或发生碰撞时会改变运动状态
-**STATIC**: 质量无穷大，位置固定，速度为 0 的物体，而且不会因为外力作用或者碰撞而改变运动状态
-**KINEMATIC**: 同static物体类似，不响应外力作用和碰慌效果，但是有一定质量，自身可以有速度的物体
+1. DYNAMIC：有一定质量的物体，外力施加到上面或发生碰撞时会改变运动状态
+2. STATIC：静态物体，其质量无穷大，位置固定，速度为 0 的物体，而且不会因为外力作用或者碰撞而改变运动状态
+3. KINEMATIC：运动学物体，同静态物体类似，不响应外力作用和碰慌效果，但是有一定质量，自身可以有速度的物体
 
 Chipmunk2D 定义了三种形状类型：
 
@@ -71,7 +71,7 @@ typedef enum cpShapeType{
 
 p.  
 
-h2. Collision
+h1. Collision
 
 两个具体形状之间的碰撞检测函数定义成如下形式：
 
@@ -96,34 +96,33 @@ $$ index = type_a + type_b \cdot \text{CP_NUM_SHAPES};$$
 
 p.  
 
-h2. Space
+h1. Space
 
 cpSpace 是存储所有物体的容器，作为物体之间发生碰撞的环境（代码只贴了一部分，其他成员在下文会有介绍）：
-
-p(. **stamp** ：当前世界的时间
-**dynamicBodies** ：世界中所有动态物体列表 
-**staticBodies** ：所有静态物体列表
-**dynamicShapes** ： 动态物体的加速结构
-**staticShapes** ：静态物体的加速结构
 
 p.  
 
 {% highlight  C %}
 "定义在cpSpace.h, cpSpace.c"
 struct cpSpace {
+    //当前世界的时间
     cpTimestamp stamp;
-
+    
+    //世界中所有动态物体列表 
     cpArray *dynamicBodies;
+    //所有静态物体列表
     cpArray *staticBodies;
 	
+    //动态物体的加速结构
     cpSpatialIndex *staticShapes;
+    //静态物体的加速结构
     cpSpatialIndex *dynamicShapes;
 };
 {% endhighlight %}
 
 p. 
 
-h2. Time step
+h1. Time step
 
 time step是最重要的部分，实现在 cpSpaceStep.c 里：
 
@@ -144,7 +143,7 @@ cpSpaceStep(cpSpace *space, cpFloat dt)
 
 p.  
 
-h3. 1. 初始化
+h2. 初始化
 
 p. 
 
@@ -168,7 +167,7 @@ arbiters->num = 0;
 
 p.  
 
-h3. 2. 位置 & 速度积分
+h2. 位置，速度积分
 
 物体的位置和速度的积分逻辑被封装成了对应的函数，作为Body结构的成员之一：
 
@@ -184,7 +183,7 @@ Chipmunk2D 对这部分的积分用了最简单的["欧拉积分":http://en.wiki
 %{color:RED}TODO%
 位置和速度积分的位置顺序的作用?
 
-h3. 3. 碰撞检测
+h2. 碰撞检测
 
 p. 整个碰撞检测的流程很简单：
 
@@ -291,7 +290,7 @@ p.
 
 p. 
 
-h3. 4. 休眠检测
+h2. 休眠检测
 
 物体睡眠相关的实现在cpSpaceComponent.c里面，在cpSpace结构体里定义了两个阀值:
 
@@ -514,7 +513,7 @@ cpSpaceActivateBody(cpSpace *space, cpBody *body)
 
 p.  
 
-h3. 5. 约束求解
+h2. 约束求解
 
 约束求解的部分被分成了两个步骤, 常量计算部分和迭代计算部分，两个步骤之间插入了一步速度积分的过程
 

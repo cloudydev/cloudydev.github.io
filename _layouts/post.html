@@ -1,9 +1,21 @@
 ---
 layout: default
 ---
-<div id="post">
-{{ content }}
+<div class="row">
+<div class="col-md-9" id="post">{{content}}</div>
+<div class="col-md-2">
+  <div id="toc"></div>
 </div>
+</div>
+
+<script type="text/javascript">
+$(function() {
+  //Calls the tocify method on your HTML div.
+  var toc = $("#toc").tocify().data("toc-tocify");
+  toc.setOption("showEffect", "fadeIn");
+  toc.setOption("theme", "jqueryui");
+});
+</script>
 
 <div id="related">
   <h2>Related Posts</h2>
