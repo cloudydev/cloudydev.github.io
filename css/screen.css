@@ -30,7 +30,7 @@ blockquote {
 .tocify {
   text-align:left;
   border:none;
-  padding-top:44px;
+  padding-top:12px;
 }
 
 .tocify-header {
@@ -38,12 +38,12 @@ blockquote {
 }
 
 .tocify ul, .tocify li {
-  line-height: 90%;
+  line-height: 70%;
 }
 
 .tocify a{
   color: darkgray;
-  font-size: 105%;
+  font-size: 100%;
 }
 
 /*highlighted toc item*/

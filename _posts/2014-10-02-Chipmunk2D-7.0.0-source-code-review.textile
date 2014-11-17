@@ -3,7 +3,7 @@ layout: post
 title: Chipmunk2D Version 7.0.0 代码实现
 ---
 
-h1. Overview
+h1. 工程结构
 
 代码取自 Chipmunk2D 的 ["GitHub仓库":https://github.com/slembcke/Chipmunk2D] 的master branch，最新的开发版本是7.0.0，真正有用的代码在 include 和 src 文件夹下面，代码量不到1w行:
 
@@ -14,15 +14,15 @@ h1. Overview
        0 files ignored.
 
 http://cloc.sourceforge.net v 1.60  T=0.37 s (148.6 files/s, 34996.2 lines/s)
-------------------------------------------------------------------------------
-Language                files           blank         comment           code
-------------------------------------------------------------------------------
-C                       28              1654          991               6469
-C/C++ Header            26              698           1246              1844
-CMake                   1               4             7                 37
-------------------------------------------------------------------------------
-SUM:                    55              2356          2244              8350
-------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------
+Language                files             blank           comment           code
+-----------------------------------------------------------------------------------
+C                       28                1654            991               6469
+C/C++ Header            26                698             1246              1844
+CMake                   1                 4               7                 37
+-----------------------------------------------------------------------------------
+SUM:                    55                2356            2244              8350
+-----------------------------------------------------------------------------------
 </pre>
 
 用Xcode打开，源代码根据用途分成Basics, Collision, Constraints, Space四个模块:
@@ -33,7 +33,7 @@ SUM:                    55              2356          2244              8350
 p.  
 
 
-h1. Basics
+h1. 基本数据结构
 
 Basics 下面是 Chipmunk2D 里面用到的基本数据结构，包括：
 
@@ -42,7 +42,7 @@ Basics 下面是 Chipmunk2D 里面用到的基本数据结构，包括：
 
 p. 
 
-h1. Body and shape
+h1. 物体和形状
 
 Chipmunk2D 里定义了三种物体类型：
 
@@ -54,9 +54,11 @@ typedef enum cpBodyType {
 } cpBodyType;
 {% endhighlight %}
 
-1. DYNAMIC：有一定质量的物体，外力施加到上面或发生碰撞时会改变运动状态
-2. STATIC：静态物体，其质量无穷大，位置固定，速度为 0 的物体，而且不会因为外力作用或者碰撞而改变运动状态
-3. KINEMATIC：运动学物体，同静态物体类似，不响应外力作用和碰慌效果，但是有一定质量，自身可以有速度的物体
+p.  
+
+* DYNAMIC：有一定质量的物体，外力施加到上面或发生碰撞时会改变运动状态
+* STATIC：静态物体，其质量无穷大，位置固定，速度为 0 的物体，而且不会因为外力作用或者碰撞而改变运动状态
+* KINEMATIC：运动学物体，同静态物体类似，不响应外力作用和碰慌效果，但是有一定质量，自身可以有速度的物体
 
 Chipmunk2D 定义了三种形状类型：
 
@@ -71,7 +73,7 @@ typedef enum cpShapeType{
 
 p.  
 
-h1. Collision
+h1. 物体之间的碰撞
 
 两个具体形状之间的碰撞检测函数定义成如下形式：
 
@@ -80,6 +82,8 @@ typedef void (*CollisionFunc)(const cpShape *a,
                               const cpShape *b,
                               struct cpCollisionInfo *info);
 {% endhighlight %}
+
+p.  
 
 不同形状之间的碰撞函数存在一个函数指针数组里面，并按照两个形状的类型枚举值进行寻址 (这里是把枚举小的放到 \(type_a\) ):
 $$ index = type_a + type_b \cdot \text{CP_NUM_SHAPES};$$
@@ -96,7 +100,7 @@ $$ index = type_a + type_b \cdot \text{CP_NUM_SHAPES};$$
 
 p.  
 
-h1. Space
+h1. 物体空间（世界）
 
 cpSpace 是存储所有物体的容器，作为物体之间发生碰撞的环境（代码只贴了一部分，其他成员在下文会有介绍）：
 
@@ -122,7 +126,7 @@ struct cpSpace {
 
 p. 
 
-h1. Time step
+h1. 空间的更新
 
 time step是最重要的部分，实现在 cpSpaceStep.c 里：
 
@@ -218,9 +222,9 @@ p.
 
 p.  Chipmunk2D 里的加速结构需要实现 **cpSpatialIndexClass** 里声明的函数以提供基本的遍历、添加、删除、更新、碰撞查询操作，目前的版本中，Chipmunk2D 提供了三种加速结构：
 
-p(. 1. X 轴向上的 Sweep and Prone，实现在 cpSweep1D.c 里
-2. 空间网格划分，实现在 cpSpatialHash.c 里
-3. 体积树，Chipmunk2D 里默认使用的结构，实现在 cpBBTree.c 里
+* X 轴向上的 Sweep and Prone，实现在 cpSweep1D.c 里
+* 空间网格划分，实现在 cpSpatialHash.c 里
+* 体积树，Chipmunk2D 里默认使用的结构，实现在 cpBBTree.c 里
 
 {% highlight  C %}
 "完整定义和函数指针的声明参见 cpSpatialIndex.h"
@@ -302,8 +306,8 @@ struct cpSpace {
 {% endhighlight %}
 p.  
 
-p(. **idleSpeedThreshold**: 速度阀值，当物体的速度小于这个值时，可以近似的认为这个物体是静止的。
-**sleepTimeTreshold**: 时间阀值，当物体保持静止的时间超过这个值时，我们认为这个物体是处于静止状态。
+* idleSpeedThreshold: 速度阀值，当物体的速度小于这个值时，可以近似的认为这个物体是静止的。
+* sleepTimeTreshold: 时间阀值，当物体保持静止的时间超过这个值时，我们认为这个物体是处于静止状态。
 
 p.  
 
@@ -329,7 +333,7 @@ cpSpaceStep(cpSpace *space, cpFloat dt)
 
 p. 
 
-* **静止时间**
+h3. 静止时间
 
 p. 
 
@@ -357,7 +361,7 @@ if(sleep){
 
 p.  
 
-* **contact graph**
+h3. Contact graph
 
 考虑到物体之间的碰撞作用，当有多个物体参与了碰撞时，即使其中一个物体达到了休眠的条件，我们也无法简单的就将这个物体休眠掉。比如下图这种情况：
 
@@ -365,8 +369,8 @@ A 与 B 发生碰撞，B 和 C 之间有接触碰撞，虽然 C 物体已经满�
 
 因此，一个动态物体进入休眠状态需要两个条件：
 
-p(. 1. 这个物体要处于静止状态
-2. 与这个物体有 %{color:RED}接触关系% (包括碰撞接触和约束关系) 的物体都处于静止状态。
+* 这个物体要处于静止状态
+* 与这个物体有 %{color:RED}接触关系% (包括碰撞接触和约束关系) 的物体都处于静止状态。
 
 更进一步说，当满足上述条件时，有接触关系的一族物体都可以进入休眠状态。我们把物体当作节点，接触关系当作边，很容易用一张图来表示物体之间的接触关系，这个就是 contact graph。
 
@@ -423,7 +427,7 @@ for(int i=0; i<bodies->num;){
 
 p.  
 
-* **休眠**
+h3. 物体的休眠
 
 p. 让一个动态物体进入休眠状态是暂时把这个物体当作"静态物体"来看待，因为静态物体只会被动的参与碰撞，这样就省掉了这个物体与其他物体碰撞检测的 CPU 运算。
 
@@ -453,15 +457,15 @@ cpSpaceDeactivateBody(cpSpace *space, cpBody *body)
 
 p.  
 
-* **唤醒**
+h3. 物体的唤醒
 
 p.  
 
 不幸的是，物体显然不会一直的休眠下去，总会有一些外界的干扰会把它从休眠状态唤醒，这里的干扰包括：
 
-p(. 1. 有其他正在活动的物体发生了碰撞
-2. 与 **kinematic** 物体有接触
-3. 游戏逻辑强制唤醒一个物体
+* 有其他正在活动的物体发生了碰撞
+* 与 **kinematic** 物体有接触
+* 游戏逻辑强制唤醒一个物体
 
 {% highlight  C %}
 // 4.2 唤醒受到干扰的物体
@@ -522,9 +526,7 @@ void
 cpSpaceStep(cpSpace *space, cpFloat dt)
 {
     cpSpaceLock(space); {
-    /* 
-    5 约束求解-常量部分 
-    */
+    /* 约束求解-常量部分 */
         // 5.1 过滤无效碰撞体
         cpHashSetFilter(space->cachedArbiters, 
           (cpHashSetFilterFunc)cpSpaceArbiterSetFilter,
@@ -543,17 +545,11 @@ cpSpaceStep(cpSpace *space, cpFloat dt)
             // ... 
 	    constraint->klass->preStep(constraint, dt);
       	}
-    /* 
-    6 速度积分 
-    */
+    /* 速度积分 */
 
-    /*
-    7 施加缓存冲量
-    */ 
+    /* 施加缓存冲量*/ 
 
-    /* 
-    8 约束求解-迭代部分
-    */
+    /* 约束求解-迭代部分*/
         for(int i=0; i<space->iterations; i++){
             // 8.1 求解碰撞方程，迭代部分
 	    for(int j=0; j<arbiters->num; j++){
@@ -572,7 +568,7 @@ cpSpaceStep(cpSpace *space, cpFloat dt)
 
 p.  
 
-* 过滤无效碰撞体
+h3. 过滤无效碰撞体
 
 p. 
 
@@ -603,9 +599,23 @@ cpSpaceArbiterSetFilter(cpArbiter *arb, cpSpace *space)
 
 p.  
 
-* 碰撞方程-常量部分
-** con->nMass 代表1_4中的分母部分，对于迭代求解的算法中，这部分是常量，因此单独把这一部分的计算放到了前面
-** con->bounce 是公式1_4中的 \( e \cdot \Delta \vec{u}_{(t, \vec{n})} \)
+h3. 碰撞方程-常量部分
+
+理解这部分的关键时下面的碰撞方程：根据当前速度和弹性系数计算碰撞发生瞬间产生的冲量 \(\vec{J}\)
+
+$$
+\vec{J} = K^{-1} \cdot (1 + e) \cdot \Delta \vec{u}_{(t, \vec{n})} \\
+K = M_{Body_1}^{-1} + M_{Body_2}^{-1} + 
+[ 
+I_1^{-1} \cdot (\vec{r_1} \times \vec{n}) \times \vec{r_1} +
+I_2^{-1} \cdot (\vec{r_2} \times \vec{n}) \times \vec{r_2}
+] 
+\cdot \vec{n}
+$$
+
+
+* con->nMass 代表上面公式中的 \(K\) ，对于迭代求解的算法中，这部分是常量，因此单独把这一部分的计算放到了前面
+* con->bounce 是上面公式中的 \( e \cdot \Delta \vec{u}_{(t, \vec{n})} \)
 
 p.  
 
@@ -628,13 +638,11 @@ cpArbiterPreStep(cpArbiter *arb, cpFloat dt, cpFloat slop, cpFloat bias)
 p. 
 
 
-* 碰撞方程-迭代部分
-
-%{color:RED}TODO%
+h3. 碰撞方程-迭代部分
 
 p.  
 
-作者把碰撞和自定义约束的求解放到了一个循环体內，在 **cpArbiterApplyImpulse** 中计算公式 **1_4** 中的冲量 \(\vec{J}\)，作用到物体上立即改变速度状态：
+**cpArbiterApplyImpulse** 中计算上面公式中的冲量 \(\vec{J}\)，然后施加到物体上，立即改变物体的速度状态：
 
 p. 
 
@@ -655,15 +663,6 @@ cpArbiterApplyImpulse(cpArbiter *arb)
 }
 {% endhighlight %}
 
-* 施加缓存的冲量
+p. 
 
-%{color:RED}TODO%
-
-$$
-\vec{J} = \int \vec{F} dt
-$$
-
-
-<div class="figure">
-<img src="/data/impluse.png">
-</div>
+关于这里的迭代算法，可以参考Thomas Jakobsen 的 Advanced Character Physics。
