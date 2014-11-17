@@ -12,12 +12,13 @@
 
 body {
   /*background: #F5F5F0;*/
-  font: lucida-console, helvetica, arial, clean, sans-serif;
+  font-size:15px;
+  font-family: 'Courier', 'Lucida Console', 'helvetica', 'arial', 'clean', 'sans-serif';
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-size: 100%;
-  font-family: 'Courier New','Lucida Console', 'helvetica', 'arial', 'clean', 'sans-serif';
+  font-family: 'Courier','Lucida Console', 'helvetica', 'arial', 'clean', 'sans-serif';
 }
 
 blockquote {
@@ -74,7 +75,7 @@ ul.posts a:hover {
 
 ul.posts span {
   color: #aaa;
-  font-family: Monaco, "Courier New", monospace;
+  font-family: 'Courier', 'Monaco', 'monospace';
   font-size: 80%;
 }
 
@@ -148,7 +149,7 @@ ul.posts span {
   border-style: solid;
   border-width: 1px;
   border-color: #aaaaaa;
-  font-family: 'Courier New','Lucida Console', 'helvetica', 'arial', 'clean', 'sans-serif';
+  font-family: 'Courier','Lucida Console', 'helvetica', 'arial', 'clean', 'sans-serif';
   line-height: normal;
   margin: 2px 0 2px 0;
 }
@@ -174,7 +175,7 @@ ul.posts span {
 #post code {
   border: 1px solid #ddd;
   font-size: 15px;
-  font-family: 'Courier New','Lucida Console', 'helvetica', 'arial', 'clean', 'sans-serif';
+  font-family: 'Courier','Lucida Console', 'helvetica', 'arial', 'clean', 'sans-serif';
   line-height: normal;
   padding: 0 .2em;
 }
@@ -191,14 +192,12 @@ ul.posts span {
 }
 
 #post h2 {
-  /*color:#b81d18;*/
   color:black;
   font-weight: bold;
   font-size:120%;
 }
 
 #post h3 {
-  /*color:#b81d18;*/
   color:black;
   font-weight: bold;
   font-size:105%;

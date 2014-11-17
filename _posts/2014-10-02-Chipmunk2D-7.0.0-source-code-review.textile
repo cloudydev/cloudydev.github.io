@@ -25,13 +25,15 @@ SUM:                    55                2356            2244              8350
 -----------------------------------------------------------------------------------
 </pre>
 
+p. 
+
 用Xcode打开，源代码根据用途分成Basics, Collision, Constraints, Space四个模块:
 
 <div class="figure">
 <img src="\data\img_chipmunk_7_xcode.png">
 </div>
-p.  
 
+p.  
 
 h1. 基本数据结构
 
@@ -394,6 +396,7 @@ struct cpBody {
 {% endhighlight %}
 
 p.  
+
 创建contact graph的过程很简单，只需要 DFS 遍历 arbiterList 和 constrainList 即可:
 
 {% highlight  C %}
