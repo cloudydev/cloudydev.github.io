@@ -5,7 +5,6 @@
 /*****************************************************************************/
 
 /* Global Reset */
-
 * {
   margin: 0;
   padding: 0;
@@ -14,16 +13,11 @@
 body {
   /*background: #F5F5F0;*/
   font: lucida-console, helvetica, arial, clean, sans-serif;
-  *font-size: normal;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-size: 100%;
   font-family: 'Courier New','Lucida Console', 'helvetica', 'arial', 'clean', 'sans-serif';
-}
-
-p {
-  margin: 1em 0;
 }
 
 blockquote {
@@ -36,7 +30,7 @@ blockquote {
 .tocify {
   text-align:left;
   border:none;
-  padding-top:48px;
+  padding-top:46px;
 }
 
 .tocify-header {
@@ -48,9 +42,13 @@ blockquote {
 }
 
 .tocify a{
-  color: gray;
-  /*font-weight: bold;*/
+  color: darkgray;
   font-size: 105%;
+}
+
+/*highlighted toc item*/
+.active a{
+  color: purple;
 }
 
 /*****************************************************************************/
@@ -68,7 +66,7 @@ ul.posts li {
 }
 
 ul.posts a {
-  color: gray;
+  color: darkgray;
 }
 ul.posts a:hover {
   color: #a00;
@@ -85,7 +83,6 @@ ul.posts span {
 /* Site
 /*
 /*****************************************************************************/
-
 .title {
   color: #a00;
   font-weight: bold;
@@ -170,11 +167,9 @@ ul.posts span {
   max-width:100%;
 }
 
-#post ul,
-#post ol {
+#post ul, #post ol {
   margin-left: 1.15em;
 }
-
 
 #post code {
   border: 1px solid #ddd;
@@ -189,7 +184,6 @@ ul.posts span {
 }
 
 /* terminal */
-
 #post h1 {
   color:black;
   font-weight: bold;
@@ -217,5 +211,4 @@ ul.posts span {
 #related h2 {
   margin-bottom: 1em;
 }
-*/
 
