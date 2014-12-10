@@ -186,8 +186,7 @@ struct cpBody {
 
 Chipmunk2D 对这部分的积分用了最简单的["欧拉积分":http://en.wikipedia.org/wiki/Euler_method] ，对位置的积分放到了速度积分的前面(?)。
 
-%{color:RED}TODO%
-位置和速度积分的位置顺序的作用?
+%{color:RED}TODO% 位置和速度积分的位置顺序的作用?
 
 h2. 碰撞检测
 
@@ -195,13 +194,9 @@ p. 整个碰撞检测的流程很简单：
 
 {% highlight  C %}
 cpSpaceLock(space); {
-    /* 
-    2 位置积分
-    */
+    /* 2 位置积分 */
     
-    /* 
-    3 碰撞检测
-    */
+    /* 3 碰撞检测 */
     // 3.1 创建 Contact Buffer
     cpSpacePushFreshContactBuffer(space);
     
@@ -220,7 +215,7 @@ cpSpaceLock(space); {
 
 p. 
 
-* 加速结构
+h3. 加速结构
 
 p.  Chipmunk2D 里的加速结构需要实现 **cpSpatialIndexClass** 里声明的函数以提供基本的遍历、添加、删除、更新、碰撞查询操作，目前的版本中，Chipmunk2D 提供了三种加速结构：
 
@@ -244,15 +239,15 @@ struct cpSpatialIndexClass {
 
 p. 
 
-* Broad Phase
+h3. Broad Phase
 
 p.  
 
-* Narrow Phase
+h3. Narrow Phase
 
 p.  
 
-* Contact Buffer
+h3. Contact Buffer
 
 首先，在 cpSpace 里定义了一个碰撞对的生命周期，超过生命周期的碰撞对就会被删除掉
 
@@ -290,7 +285,7 @@ cpSpacePushFreshContactBuffer(cpSpace *space)
 
 p.  
 
-* 计算触点
+h3. 计算触点
 
 %{color:RED}TODO%
 

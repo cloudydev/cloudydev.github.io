@@ -187,19 +187,18 @@ ul.posts span {
 /* terminal */
 #post h1 {
   color:black;
-  font-weight: bold;
-  font-size:130%;
+  font-size:125%;
 }
 
 #post h2 {
-  color:black;
-  font-weight: bold;
-  font-size:120%;
+  color:#a00;
+  background: url('/data/css/h2-h3-bg.png') no-repeat left center;
+  padding-left:12px;
+  font-size:105%;
 }
 
 #post h3 {
   color:black;
-  font-weight: bold;
   font-size:105%;
 }
 

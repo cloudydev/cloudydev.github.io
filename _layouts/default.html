@@ -27,6 +27,11 @@
   <script type="text/javascript"
     src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
   </script>
+  
+  <!-- post specific js loading-->
+  {% for js in page.customjs %}
+  <script type="text/javascript" src = "{{ js }}"></script>
+  {% endfor %}
 </head>
 <body>
 
