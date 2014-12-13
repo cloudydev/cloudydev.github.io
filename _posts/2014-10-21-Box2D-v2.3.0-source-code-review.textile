@@ -5,7 +5,7 @@ title: Box2D Version 2.3.0 代码实现
 
 h1. 工程结构
 
-代码取自 ["Box2D.org":http://box2d.org/downloads/] , 目前的最新版本是2.3.0, 工程结构比较简单，打开位遇 Build/xcode5 下的工程：
+代码取自 ["Box2D.org":http://box2d.org/downloads/] , 目前的最新版本是2.3.0, 工程结构比较简单，打开位于 Build/xcode5 下的工程：
 
 <div class="figure">
 <img src="\data\Box2D-Xcode-project.png">
@@ -31,18 +31,76 @@ SUM:                            95           3600           3953          13779
 
 p. 
 
-另外需要提起的时，Box2D的注释非常详细：大家可以看到在本文的第一张图里面看到注释里的 Position Correction Notes部分，作者把实现过程中尝试了的算法和思考过程都写了进去，一些数值优化的部分也做了关键性的注释，所以说注释的部分也包含了很大的信息量！
+另外需要提起的是，Box2D的注释非常详细：大家可以看到在本文的第一张图里面看到注释里的 Position Correction Notes部分，作者把实现过程中尝试了的算法和思考过程都写了进去，一些数值优化的部分也做了关键性的注释，所以说注释的部分也包含了很大的信息量！
 
-h1. 内存分配
+h1. 内存管理
 
-h2. Block Allocater
+h2. 内存池（Block Allocator）
 
-h2. Stack Allocater
+如果程序里出现频繁的动态分配和释放许多小额的内存区块时，有两个很严重的性能问题就出现了：
+* 内存碎片的问题。
+* 内存浪费，在C++中，动态申请一块内存时会额外附带一个cookie，用来记录这块内存的信息，就像交给系统的税一样，申请的内存区块越小，这个税的比重就越大，内存的使用率就越低。
 
-h2. LIFO Stack
+Block Allocator 的做法是，定义一个区块大小的临界值 b2_maxBlockSize， 如果申请的内存大于这个临界值，就直接使用 malloc 分配，如果小于临界值，则以内存池的形式管理这些小额的区块。
 
-h1. 数学运算
 
-h1. 形状
+h2. 栈式分配（Stack Allocator）
 
-h1. Dynamics
+在每一帧的碰撞的检测阶段，需要分配大量的内存，当检测完毕之后需要释放这些内存，在这种请路况下，栈式的内存分配机制就会起到很大的作用。
+
+首先一次性分配一段连续的，足够大的内存，按照栈底到栈顶的顺序依次分配内存，释放内存的时候按照相反的方向归还内存快。
+
+<div class="figure">
+<img src="/data/stack_allocator.png">
+</div>
+
+实现是很简单的，用一个指针指向已经被使用的内存的栈顶，在申请一块内存时，从当前的栈顶位置开始，切走一块内存，更新栈顶的位置，释放内存时，只要简单的把栈顶向下移动对应内存快的大小即可
+
+* 用一个字符串数组 m_data ，在栈上分配出一块连续的大块内存：
+
+{% highlight cpp linenos linenostart=37%}
+class b2StackAllocator
+{
+public:
+	b2StackAllocator();
+	~b2StackAllocator();
+
+	void* Allocate(int32 size);
+	void Free(void* p);
+
+	int32 GetMaxAllocation() const;
+
+private:
+	// 栈上分配的数组
+	char m_data[b2_stackSize];
+	int32 m_index;
+
+	int32 m_allocation;
+	int32 m_maxAllocation;
+
+	// 记录所有分配出去的内存块信息
+	b2StackEntry m_entries[b2_maxStackEntries];
+	int32 m_entryCount;
+};
+{% endhighlight %}
+
+p. 
+
+* 结构体 b2StackEntry 用来记录当前已经分配出去的内存块信息
+
+{% highlight cpp linenos linenostart=30%}
+struct b2StackEntry
+{
+	char* data;
+	int32 size;
+	// 标记这块内存是动态分配的还是从m_data数组里切出来的
+	bool usedMalloc;
+};
+{% endhighlight %}
+
+p.  
+
+* 分配内存，如果申请的内存大小超过了 m_data 中没有被使用的部分，则在堆上动态分配一块出来
+* 释放内存，如果不是动态分配的就归还到 m_data 数组里
+
+h1. 碰撞系统
