@@ -43,6 +43,104 @@ h2. 内存池（Block Allocator）
 
 Block Allocator 的做法是，定义一个区块大小的临界值 b2_maxBlockSize， 如果申请的内存大于这个临界值，就直接使用 malloc 分配，如果小于临界值，则以内存池的形式管理这些小额的区块。
 
+* 将动态分配的小额区块划分到不同的区间上，对于每种大小的内存快，维护一个尚未被占用的区块链表 m_freeLists， 
+
+{% highlight cpp linenos linenostart=49 %}
+private:
+	/* 内存池 */
+	b2Chunk* m_chunks;
+	int32 m_chunkCount;
+	int32 m_chunkSpace;
+	/* 每个内存区间的空闲区块链表 */
+	b2Block* m_freeLists[b2_blockSizes];
+	/* 可以分配的区块大小 */
+	static int32 s_blockSizes[b2_blockSizes];
+	static uint8 s_blockSizeLookup[b2_maxBlockSize + 1];
+	static bool s_blockSizeLookupInitialized;
+{% endhighlight %}
+
+p.  
+
+* 分配内存时，如果需求量大于临界值（b2_maxBlockSize），则直接用 malloc 分配内存
+
+{% highlight cpp linenos linenostart=97 %}
+void* b2BlockAllocator::Allocate(int32 size)
+{
+    if (size == 0)
+        return NULL;
+
+    b2Assert(0 < size);
+
+    if (size > b2_maxBlockSize)
+    {
+        return b2Alloc(size);
+    }
+    /* ... */
+}
+{% endhighlight %}
+
+p.  
+
+* 否则，将内存需求量上调的对应的区间上，去对应区间的free list上查找空闲的内存区块，如果有，就直接返回
+
+{% highlight cpp linenos linenostart=109 %}
+/* 小额区块，查找 free list */
+    int32 index = s_blockSizeLookup[size];
+    b2Assert(0 <= index && index < b2_blockSizes);
+
+    if (m_freeLists[index])
+    {
+        b2Block* block = m_freeLists[index];
+        m_freeLists[index] = block->next;
+        return block;
+    }
+{% endhighlight %}
+
+p.  
+
+* 如果当前的free list 没有空闲的区块时，就需要从内存池中切出部分内存块填充到 free list里
+* 最差的情况，内存池也完全用光了，这时候就需要在堆上再 malloc 出一块较大的内存区块补充到内存池里
+
+{% highlight cpp linenos linenostart=118 %}
+/* 从内存池中切出内存补充到 free list 里*/
+    else
+    {
+        if (m_chunkCount == m_chunkSpace)
+        {
+            b2Chunk* oldChunks = m_chunks;
+            m_chunkSpace += b2_chunkArrayIncrement;
+            m_chunks = (b2Chunk*)b2Alloc(m_chunkSpace * sizeof(b2Chunk));
+            memcpy(m_chunks, oldChunks, m_chunkCount * sizeof(b2Chunk));
+            memset(m_chunks + m_chunkCount, 0, b2_chunkArrayIncrement * sizeof(b2Chunk));
+            b2Free(oldChunks);
+        }
+
+        b2Chunk* chunk = m_chunks + m_chunkCount;
+        chunk->blocks = (b2Block*)b2Alloc(b2_chunkSize);
+#if defined(_DEBUG)
+        memset(chunk->blocks, 0xcd, b2_chunkSize);
+#endif
+        int32 blockSize = s_blockSizes[index];
+        chunk->blockSize = blockSize;
+        int32 blockCount = b2_chunkSize / blockSize;
+        b2Assert(blockCount * blockSize <= b2_chunkSize);
+        for (int32 i = 0; i < blockCount - 1; ++i)
+        {
+            b2Block* block = (b2Block*)((int8*)chunk->blocks + blockSize * i);
+            b2Block* next = (b2Block*)((int8*)chunk->blocks + blockSize * (i + 1));
+            block->next = next;
+        }
+        b2Block* last = (b2Block*)((int8*)chunk->blocks + blockSize * (blockCount - 1));
+        last->next = NULL;
+
+        m_freeLists[index] = chunk->blocks->next;
+        ++m_chunkCount;
+
+        return chunk->blocks;
+    }
+}
+{% endhighlight %}
+
 
 h2. 栈式分配（Stack Allocator）
 
